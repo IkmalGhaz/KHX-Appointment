@@ -2,133 +2,98 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KHXCare - Book Appointment</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Book Appointment</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
     <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f0f2f5; -webkit-tap-highlight-color: transparent; }
         
-        /* Smooth Fade Animation */
-        .step-content { animation: slideUp 0.4s ease-out; }
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        /* Mobile Frame (Matches Dashboard) */
+        .mobile-frame { width: 100%; max-width: 375px; height: 812px; background: #fafafa; margin: 0 auto; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+        @media (min-width: 768px) { .mobile-frame { border-radius: 40px; border: 8px solid #1a1a1a; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); height: 812px; margin-top: 2rem; } }
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #0f172a; }
-        ::-webkit-scrollbar-thumb { background: #2563eb; border-radius: 10px; }
+        /* Hide Scrollbar */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Smooth Fade In */
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="bg-slate-950 min-h-screen text-white relative overflow-x-hidden">
+<body class="flex items-center justify-center min-h-screen">
 
-    <div class="fixed inset-0 z-0 pointer-events-none">
-        <div class="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-blue-600 blur-[120px] opacity-20 animate-pulse"></div>
-        <div class="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] rounded-full bg-indigo-600 blur-[120px] opacity-20 animate-pulse"></div>
-    </div>
-
-    <div class="relative z-10 max-w-3xl mx-auto min-h-screen flex flex-col p-6">
+    <div class="mobile-frame">
         
-        <div class="flex items-center justify-between mb-8 pt-4">
-            <a href="index.html" class="p-2 bg-slate-900 border border-slate-800 rounded-full hover:bg-slate-800 transition-colors">
-                <i data-lucide="chevron-left" class="w-6 h-6 text-slate-400"></i>
-            </a>
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/30">
-                    <i data-lucide="activity" class="w-6 h-6 text-white"></i>
-                </div>
-                <div>
-                    <h1 class="font-bold text-xl leading-none">KHX<span class="text-blue-500">Care</span></h1>
-                    <p class="text-xs text-slate-400">Medical Appointments</p>
-                </div>
+        <div class="bg-white px-6 pt-8 pb-4 sticky top-0 z-20">
+            <div class="flex items-center justify-between mb-6">
+                <button onclick="window.handleBack()" class="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+                    <i data-lucide="arrow-left" class="w-6 h-6"></i>
+                </button>
+                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Step <span id="step-lbl">1</span> of 3</span>
             </div>
-            <div class="w-10"></div>
-        </div>
-
-        <div class="mb-10 px-4">
-            <div class="flex justify-between items-center relative">
-                <div class="absolute left-0 right-0 top-1/2 h-1 bg-slate-800 -z-10 rounded-full"></div>
-                <div class="absolute left-0 top-1/2 h-1 bg-blue-600 -z-10 rounded-full transition-all duration-500" id="progress-line" style="width: 0%"></div>
-                
-                <div id="ind-1" class="w-10 h-10 rounded-full bg-blue-600 border-4 border-slate-950 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-600/50 transition-all">1</div>
-                <div id="ind-2" class="w-10 h-10 rounded-full bg-slate-800 border-4 border-slate-950 flex items-center justify-center font-bold text-slate-500 transition-all">2</div>
-                <div id="ind-3" class="w-10 h-10 rounded-full bg-slate-800 border-4 border-slate-950 flex items-center justify-center font-bold text-slate-500 transition-all">3</div>
-                <div id="ind-4" class="w-10 h-10 rounded-full bg-slate-800 border-4 border-slate-950 flex items-center justify-center font-bold text-slate-500 transition-all">4</div>
-            </div>
-            <div class="flex justify-between mt-2 text-xs font-medium text-slate-500 px-1">
-                <span>Service</span>
-                <span class="pl-4">Doctor</span>
-                <span class="pl-3">Time</span>
-                <span>Done</span>
-            </div>
-        </div>
-
-        <div class="bg-slate-900/60 backdrop-blur-xl p-8 rounded-3xl border border-slate-800 shadow-2xl relative overflow-hidden min-h-[400px]">
             
-            <form id="bookingForm">
-                
-                <div id="step-1" class="step-content">
-                    <h2 class="text-2xl font-bold mb-2">Select Service</h2>
-                    <p class="text-slate-400 text-sm mb-6">Choose the medical department you need.</p>
-                    <div id="service-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="animate-pulse h-24 bg-slate-800 rounded-xl"></div>
-                        <div class="animate-pulse h-24 bg-slate-800 rounded-xl"></div>
-                    </div>
-                </div>
+            <div class="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden mb-5">
+                <div id="progress-bar" class="h-full bg-[#009688] w-[33%] transition-all duration-500"></div>
+            </div>
 
-                <div id="step-2" class="step-content hidden">
-                    <h2 class="text-2xl font-bold mb-2">Select Specialist</h2>
-                    <p class="text-slate-400 text-sm mb-6">Choose your preferred doctor.</p>
+            <h1 id="page-title" class="text-2xl font-bold text-[#004d40]">Choose a Service</h1>
+            <p id="page-subtitle" class="text-sm text-gray-500 mt-1">Select the type of care you need</p>
+        </div>
+
+        <div class="flex-1 overflow-y-auto no-scrollbar px-6 pb-8 bg-[#fafafa]">
+            
+            <form id="bookingForm" class="space-y-6">
+
+                <div id="step-1" class="step-content fade-in">
                     
-                    <div id="doctor-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-                    
-                    <button type="button" onclick="window.prevStep(1)" class="mt-8 flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-medium">
-                        <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Services
-                    </button>
-                </div>
-
-                <div id="step-3" class="step-content hidden">
-                    <h2 class="text-2xl font-bold mb-2">Schedule Visit</h2>
-                    <p class="text-slate-400 text-sm mb-6">Pick a date and available time slot.</p>
-
-                    <div class="grid md:grid-cols-2 gap-8">
-                        <div class="space-y-3">
-                            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Date</label>
-                            <div class="relative">
-                                <i data-lucide="calendar" class="absolute left-4 top-3.5 w-5 h-5 text-slate-500"></i>
-                                <input type="date" id="date-picker" class="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 pl-12 pr-4 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all scheme-dark">
-                            </div>
-                        </div>
-
-                        <div class="space-y-3">
-                            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Available Slots</label>
-                            <div id="time-slots" class="grid grid-cols-2 gap-3">
-                                <p class="text-slate-500 text-sm col-span-2 italic">Please select a date first.</p>
-                            </div>
+                    <div class="bg-[#e0f2f1] p-5 rounded-2xl mb-6">
+                        <p class="text-sm font-bold text-[#00695c] mb-3">Booking for your child?</p>
+                        <div class="flex gap-3">
+                            <button type="button" class="flex items-center gap-2 bg-white px-4 py-2.5 rounded-xl text-sm font-bold text-gray-600 shadow-sm border border-transparent hover:border-[#009688] transition-all">
+                                <i data-lucide="heart" class="w-4 h-4 text-red-400 fill-current"></i> Emma
+                            </button>
+                            <button type="button" class="flex items-center gap-2 bg-white px-4 py-2.5 rounded-xl text-sm font-bold text-gray-600 shadow-sm border border-transparent hover:border-[#009688] transition-all">
+                                <i data-lucide="heart" class="w-4 h-4 text-red-400 fill-current"></i> Liam
+                            </button>
                         </div>
                     </div>
 
-                    <button type="button" onclick="window.prevStep(2)" class="mt-8 flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-medium">
-                        <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Doctors
-                    </button>
+                    <div id="service-list" class="space-y-4">
+                        <div class="animate-pulse bg-white p-5 rounded-2xl h-24 border border-gray-100"></div>
+                        <div class="animate-pulse bg-white p-5 rounded-2xl h-24 border border-gray-100"></div>
+                    </div>
                 </div>
 
-                <div id="step-4" class="step-content hidden text-center py-12">
-                    <div class="w-24 h-24 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6 ring-1 ring-green-500/50">
-                        <i data-lucide="check-circle-2" class="w-12 h-12 text-green-500"></i>
+                <div id="step-2" class="step-content hidden fade-in">
+                    <div id="doctor-list" class="space-y-4"></div>
+                </div>
+
+                <div id="step-3" class="step-content hidden fade-in">
+                    <div class="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 mb-6">
+                        <input type="date" id="date-picker" class="w-full p-3 text-gray-700 font-bold outline-none rounded-xl focus:bg-gray-50">
                     </div>
-                    <h2 class="text-3xl font-bold text-white mb-2">Booking Confirmed!</h2>
-                    <p class="text-slate-400 mb-8 max-w-sm mx-auto">Your appointment has been scheduled successfully. View details in your dashboard.</p>
+
+                    <h3 class="font-bold text-gray-800 mb-4">Available Slots</h3>
+                    <div id="time-slots" class="grid grid-cols-2 gap-3">
+                        <p class="text-gray-400 text-sm italic col-span-2">Select a date above to see times.</p>
+                    </div>
+                </div>
+
+                <div id="step-4" class="step-content hidden fade-in text-center pt-10">
+                    <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600 animate-bounce">
+                        <i data-lucide="check" class="w-12 h-12"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Booking Confirmed!</h2>
+                    <p class="text-gray-500 mb-8 px-4">Your appointment has been successfully scheduled.</p>
                     
-                    <a href="dashboard.html" class="inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-xl transition-all shadow-lg shadow-blue-600/25">
-                        Go to Dashboard
+                    <a href="dashboard.html" class="block w-full bg-[#009688] text-white font-bold py-4 rounded-2xl shadow-lg shadow-teal-200 active:scale-95 transition-all">
+                        Back to Dashboard
                     </a>
                 </div>
 
@@ -136,10 +101,7 @@
         </div>
     </div>
 
-    <script>
-        lucide.createIcons();
-        window.prevStep = (step) => document.dispatchEvent(new CustomEvent('prevStep', { detail: step }));
-    </script>
+    <script>lucide.createIcons();</script>
     <script type="module" src="assets/js/booking.js"></script>
 </body>
 </html>
