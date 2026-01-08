@@ -1,7 +1,6 @@
 import { db, collection, getDocs, query, where, addDoc, auth } from './firebase-config.js';
 
 let currentStep = 1;
-// We store extra details now (name, price) for the final save
 let bookingData = { 
     serviceId: null, 
     serviceName: null,
@@ -18,7 +17,7 @@ const steps = [1, 2, 3, 4].map(num => document.getElementById(`step-${num}`));
 const indicators = [1, 2, 3, 4].map(num => document.getElementById(`ind-${num}`));
 const progressLine = document.getElementById('progress-line');
 
-// --- NAVIGATION LOGIC ---
+// --- NAVIGATION ---
 function showStep(step) {
     steps.forEach((el, idx) => el.classList.toggle('hidden', idx + 1 !== step));
     
@@ -41,7 +40,7 @@ document.addEventListener('prevStep', (e) => showStep(e.detail));
 async function loadServices() {
     const container = document.getElementById('service-list');
     
-    // Visual Loading State
+    // Skeleton Loader
     container.innerHTML = `
         <div class="col-span-2 space-y-4">
             <div class="animate-pulse h-24 bg-slate-800 rounded-xl"></div>
@@ -55,22 +54,18 @@ async function loadServices() {
         container.innerHTML = '';
         
         if(snapshot.empty) {
-            container.innerHTML = `<p class="text-slate-400 col-span-2 text-center">No services found in database.</p>`;
+            container.innerHTML = `<p class="text-slate-400 col-span-2 text-center">No services available.</p>`;
             return;
         }
 
         snapshot.forEach(docSnap => {
             const data = docSnap.data();
-
-            // --- FIX 1: Field Name Mismatch ---
-            // We prioritize 'serviceId' (Singular) as per your fix request.
-            // We add 'serviceIds' and 'docSnap.id' as safety fallbacks.
+            // Handle ID mismatch (ServiceId vs ServiceIds vs Doc ID)
             const linkId = data.serviceId || data.serviceIds || docSnap.id; 
             
-            // Safe fallbacks for display text
-            const title = data.specialization || "Unnamed Service";
+            const title = data.specialization || "Medical Service";
             const price = data.price || 0;
-            const time = data.duration || "N/A";
+            const time = data.duration || "30 min";
 
             container.innerHTML += `
             <div class="selection-card cursor-pointer group relative overflow-hidden bg-slate-950 border border-slate-800 hover:border-blue-500 rounded-xl p-5 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10" 
@@ -86,18 +81,16 @@ async function loadServices() {
                 </div>
                 
                 <h3 class="font-bold text-lg text-white mb-1 pointer-events-none">${title}</h3>
-                <p class="text-xs text-slate-500 pointer-events-none">${time}</p>
+                <p class="text-xs text-slate-500 pointer-events-none">${time} consultation</p>
             </div>`;
         });
         
-        // Add click listeners
+        // Attach Listeners
         document.querySelectorAll('#service-list .selection-card').forEach(card => {
             card.addEventListener('click', () => {
                 bookingData.serviceId = card.dataset.id;
                 bookingData.serviceName = card.dataset.name;
                 bookingData.price = parseFloat(card.dataset.price);
-                
-                console.log("Selected Service Link ID:", bookingData.serviceId); 
                 loadDoctors();
                 showStep(2);
             });
@@ -107,7 +100,7 @@ async function loadServices() {
 
     } catch (e) {
         console.error("Error loading services:", e);
-        container.innerHTML = `<p class="text-red-400 col-span-2 text-center">Error: ${e.message}</p>`;
+        container.innerHTML = `<p class="text-red-400 col-span-2 text-center">Unable to load services.</p>`;
     }
 }
 
@@ -117,8 +110,7 @@ async function loadDoctors() {
     container.innerHTML = '<p class="text-slate-400 animate-pulse">Searching for specialists...</p>';
 
     try {
-        console.log("Querying doctors with serviceIds containing:", bookingData.serviceId);
-        
+        // Query Doctors who have the selected service ID
         const q = query(
             collection(db, "Doctors"), 
             where("serviceIds", "array-contains", bookingData.serviceId)
@@ -130,15 +122,13 @@ async function loadDoctors() {
         if (snapshot.empty) {
             container.innerHTML = `
                 <div class="col-span-2 text-center py-8 bg-slate-900/50 rounded-xl border border-dashed border-slate-700">
-                    <p class="text-slate-400 mb-2">No doctors available for this service.</p>
-                    <p class="text-xs text-slate-600">Debug: Looking for Service ID "${bookingData.serviceId}"</p>
+                    <p class="text-slate-400">No specialists available for this service.</p>
                 </div>`;
             return;
         }
 
         snapshot.forEach(docSnap => {
             const data = docSnap.data();
-            // Store internal doctorId (e.g. "D1") if exists, else use doc ID
             const internalDocId = data.doctorId || docSnap.id;
 
             container.innerHTML += `
@@ -153,7 +143,7 @@ async function loadDoctors() {
                     <h3 class="font-bold text-white group-hover:text-blue-400 transition-colors pointer-events-none">${data.doctorName}</h3>
                     <div class="flex items-center gap-1 text-xs text-yellow-500 pointer-events-none">
                         <i data-lucide="star" class="w-3 h-3 fill-current"></i>
-                        <span>${data.rating || 'New'} Rating</span>
+                        <span>${data.rating || '5.0'} Rating</span>
                     </div>
                 </div>
             </div>`;
@@ -161,10 +151,9 @@ async function loadDoctors() {
         
         document.querySelectorAll('#doctor-list .selection-card').forEach(card => {
             card.addEventListener('click', () => {
-                bookingData.doctorId = card.dataset.id; // Firestore Doc ID
-                bookingData.doctorRefId = card.dataset.ref; // "D1"
+                bookingData.doctorId = card.dataset.id; 
+                bookingData.doctorRefId = card.dataset.ref; 
                 bookingData.doctorName = card.dataset.name;
-                
                 setupDate();
                 showStep(3);
             });
@@ -173,7 +162,7 @@ async function loadDoctors() {
 
     } catch (e) {
         console.error("Error loading doctors:", e);
-        container.innerHTML = '<p class="text-red-400">Error loading data.</p>';
+        container.innerHTML = '<p class="text-red-400">Unable to load doctors.</p>';
     }
 }
 
@@ -198,7 +187,6 @@ function renderTimeSlots() {
         btn.type = 'button';
         btn.className = 'w-full py-3 px-4 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 hover:bg-blue-600 hover:border-blue-500 hover:text-white transition-all font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none';
         btn.innerHTML = `<span class="flex items-center justify-center gap-2 pointer-events-none"><i data-lucide="clock" class="w-4 h-4"></i> ${time}</span>`;
-        
         btn.onclick = () => confirmBooking(time);
         container.appendChild(btn);
     });
@@ -208,13 +196,11 @@ function renderTimeSlots() {
 // --- STEP 4: SAVE TO FIREBASE ---
 async function confirmBooking(time) {
     bookingData.time = time;
-    
-    // --- FIX 2 & 3: Auth Check Moved Here ---
     const user = auth.currentUser;
+    
     if (!user) { 
         alert("Please login to confirm your appointment."); 
-        // Optional: Redirect to login page
-        // window.location.href = "login.html"; 
+        // window.location.href = "login.html"; // Uncomment to redirect
         return; 
     }
 
@@ -225,11 +211,8 @@ async function confirmBooking(time) {
     container.classList.add('opacity-50', 'pointer-events-none');
 
     try {
-        // Fetch User Data for "patientName"
         let patientName = "Guest"; 
-        try {
-             if(user.displayName) patientName = user.displayName;
-        } catch(err) { console.log("Could not fetch user details"); }
+        try { if(user.displayName) patientName = user.displayName; } catch(err) {}
 
         const payload = {
             cancellationReason: "",
@@ -247,27 +230,17 @@ async function confirmBooking(time) {
             timestamp: new Date()
         };
 
-        console.log("Saving Booking:", payload);
         await addDoc(collection(db, "bookings"), payload);
         showStep(4);
 
     } catch (e) {
         console.error("Booking Error:", e);
-        alert("Failed to save booking. See console.");
+        alert("Failed to save booking. Please try again.");
         container.classList.remove('opacity-50', 'pointer-events-none');
     }
 }
 
-// --- INIT (FIX 2: Allow Guest Browsing) ---
-// We load services immediately, regardless of auth state.
+// --- INIT ---
+// Start by loading services
 loadServices();
 showStep(1);
-
-// Optional listener for debugging or UI updates (like showing user profile pic)
-auth.onAuthStateChanged(user => {
-    if(user) {
-        console.log("User logged in:", user.email);
-    } else {
-        console.log("Guest browsing mode");
-    }
-});

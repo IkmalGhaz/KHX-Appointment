@@ -21,11 +21,12 @@ import {
 // Your Original Keys
 const firebaseConfig = {
   apiKey: "AIzaSyDv7UqZfz9J3QtH3LmX58Tpw_fXsciigB4",
-  authDomain: "khx-appointment.firebaseapp.com",
-  projectId: "khx-appointment",
-  storageBucket: "khx-appointment.appspot.com",
-  messagingSenderId: "1024325678901",
-  appId: "1:1024325678901:web:a1b2c3d4e5f67890abcdef"
+  authDomain: "khs-clinic-appointment.firebaseapp.com",
+  projectId: "khs-clinic-appointment",
+  storageBucket: "khs-clinic-appointment.firebasestorage.app",
+  messagingSenderId: "1001118458502",
+  appId: "1:1001118458502:web:5e8b2b95ee5098f3702707"
+  
 };
 
 // Initialize Firebase
