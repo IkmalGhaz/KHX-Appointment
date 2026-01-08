@@ -4,50 +4,84 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KHS Clinic - Dashboard</title>
-    <link rel="stylesheet" href="assets/css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 0; }
+        
+        /* Navbar */
+        .navbar { background-color: #007bff; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+        .navbar h2 { margin: 0; font-size: 1.5rem; }
+        #logout-btn { background-color: white; color: #007bff; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        #logout-btn:hover { background-color: #f0f0f0; }
+
+        /* Container */
+        .container { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+        
+        /* Grid Layout */
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+
+        /* Cards */
+        .card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .card h3 { margin-top: 0; color: #333; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+
+        /* Form Elements */
+        label { display: block; margin-bottom: 5px; font-weight: 500; color: #555; }
+        input, select, textarea { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        button.primary-btn { width: 100%; background-color: #28a745; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-size: 1rem; }
+        button.primary-btn:hover { background-color: #218838; }
+
+        /* Appointments List */
+        .appointment-item { border-bottom: 1px solid #eee; padding: 10px 0; display: flex; justify-content: space-between; align-items: center; }
+        .appointment-item:last-child { border-bottom: none; }
+        .app-date { font-weight: bold; color: #007bff; }
+        .app-status { font-size: 0.85rem; padding: 3px 8px; border-radius: 12px; background: #eee; }
+        .status-pending { background-color: #fff3cd; color: #856404; }
+        .status-confirmed { background-color: #d4edda; color: #155724; }
+    </style>
 </head>
 <body>
+
+    <nav class="navbar">
+        <h2>KHS Clinic</h2>
+        <div>
+            <span id="user-email" style="margin-right: 15px; font-size: 0.9rem;">Loading...</span>
+            <button id="logout-btn">Logout</button>
+        </div>
+    </nav>
+
     <div class="container">
-        <header class="dash-header">
-            <div>
-                <h1 style="color: var(--primary-color);">KHS Clinic</h1>
-                <p id="welcomeMsg">Welcome back, Patient</p>
-            </div>
-            <button id="logoutBtn" class="btn btn-outline">Logout</button>
-        </header>
+        <div style="margin-bottom: 20px;">
+            <h1>Patient Dashboard</h1>
+            <p>Welcome back. Manage your appointments below.</p>
+        </div>
 
-        <section class="stats-grid">
+        <div class="grid">
             <div class="card">
-                <h3>Monthly Visits</h3>
-                <canvas id="visitChart"></canvas>
-            </div>
-            <div class="card">
-                <h3>Patient Demographics</h3>
-                <canvas id="ageChart"></canvas>
-            </div>
-        </section>
+                <h3>Book Appointment</h3>
+                <form id="booking-form">
+                    <label>Date</label>
+                    <input type="date" id="app-date" required>
+                    
+                    <label>Time</label>
+                    <input type="time" id="app-time" required>
 
-        <section>
-            <h3 style="margin-bottom: 1rem;">Quick Actions</h3>
-            <div class="action-grid">
-                <a href="booking.html" class="card action-card">
-                    <i class="fa-solid fa-calendar-plus"></i>
-                    <span>Book Appointment</span>
-                </a>
-                <div class="card action-card">
-                    <i class="fa-solid fa-list-check"></i>
-                    <span>My Appointments</span>
-                </div>
-                <div class="card action-card">
-                    <i class="fa-solid fa-user-doctor"></i>
-                    <span>Top Doctors</span>
+                    <label>Reason for Visit</label>
+                    <textarea id="app-reason" rows="3" placeholder="e.g., Fever, Checkup..." required></textarea>
+
+                    <button type="submit" class="primary-btn">Confirm Booking</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>Upcoming Appointments</h3>
+                <div id="appointments-list">
+                    <p style="color: #777;">Loading appointments...</p>
                 </div>
             </div>
-        </section>
+        </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="module" src="assets/js/dashboard.js"></script>
+    <script type="module" src="dashboard.js"></script>
+
 </body>
 </html>

@@ -1,47 +1,47 @@
-import { auth, signInWithEmailAndPassword, createUserWithEmailAndPassword, db, setDoc, doc } from './firebase-config.js';
+// Import the specific Firebase functions we need
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { 
+    getAuth, 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword, 
+    onAuthStateChanged, 
+    signOut 
+} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+import { 
+    getFirestore, 
+    collection, 
+    addDoc, 
+    getDocs, 
+    query, 
+    where, 
+    doc, 
+    getDoc, 
+    setDoc 
+} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-const loginForm = document.getElementById('loginForm');
-const registerForm = document.getElementById('registerForm');
+// Your KHS Clinic Configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyDv7UqZfz9J3QtH3LmX58Tpw_fXsciigB4",
+  authDomain: "khx-appointment.firebaseapp.com",
+  projectId: "khx-appointment",
+  storageBucket: "khx-appointment.appspot.com",
+  messagingSenderId: "1024325678901",
+  appId: "1:1024325678901:web:a1b2c3d4e5f67890abcdef"
+};
 
-// LOGIN LOGIC
-if (loginForm) {
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-        try {
-            await signInWithEmailAndPassword(auth, email, password);
-            window.location.href = 'dashboard.html';
-        } catch (error) {
-            alert("Login Failed: " + error.message);
-        }
-    });
-}
-
-// REGISTER LOGIC
-if (registerForm) {
-    registerForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const name = document.getElementById('fullname').value;
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-
-        try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
-            
-            // Save extra details to Firestore Users collection
-            await setDoc(doc(db, "Users", user.uid), {
-                fullName: name,
-                email: email,
-                role: "patient"
-            });
-
-            alert("Account created!");
-            window.location.href = 'dashboard.html';
-        } catch (error) {
-            alert("Error: " + error.message);
-        }
-    });
-}
+// Export these variables so index.html can use them
+export { 
+    auth, 
+    db, 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword, 
+    onAuthStateChanged, 
+    signOut, 
+    collection, 
+    addDoc 
+};

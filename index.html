@@ -4,73 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - KHS Clinic Appointment</title>
+    <link rel="stylesheet" href="assets/css/style.css"> 
     <style>
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background-color: #eef2f6;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .login-card {
-            background: white;
-            padding: 2.5rem;
-            border-radius: 12px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-        }
-        .login-card h2 {
-            margin-bottom: 1.5rem;
-            color: #333;
-        }
-        .form-group {
-            margin-bottom: 1rem;
-            text-align: left;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            color: #666;
-            font-size: 0.9rem;
-        }
-        .form-group input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            box-sizing: border-box; /* Ensures padding doesn't widen element */
-        }
-        .btn-primary {
-            width: 100%;
-            padding: 12px;
-            background-color: #007bff; /* Medical Blue */
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 1rem;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        .btn-primary:hover {
-            background-color: #0056b3;
-        }
-        .error-msg {
-            color: red;
-            font-size: 0.9rem;
-            margin-top: 10px;
-            display: none;
-        }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #eef2f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-card { background: white; padding: 2.5rem; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        .login-card h2 { margin-bottom: 1.5rem; color: #333; }
+        .form-group { margin-bottom: 1rem; text-align: left; }
+        .form-group label { display: block; margin-bottom: 5px; color: #666; font-size: 0.9rem; }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        .btn-primary { width: 100%; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; margin-top: 10px; }
+        .btn-primary:hover { background-color: #0056b3; }
+        .error-msg { color: red; font-size: 0.9rem; margin-top: 10px; display: none; }
+        .toggle-link { margin-top: 15px; font-size: 0.9rem; color: #666; }
+        .toggle-link span { color: #007bff; cursor: pointer; text-decoration: underline; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
     <div class="login-card">
-        <h2>KHS Clinic Login</h2>
-        <form id="loginForm">
+        <h2 id="formTitle">KHS Clinic Login</h2>
+        <form id="authForm">
+            <div class="form-group hidden" id="nameGroup">
+                <label for="fullname">Full Name</label>
+                <input type="text" id="fullname" placeholder="John Doe">
+            </div>
+
             <div class="form-group">
                 <label for="email">Email Address</label>
                 <input type="email" id="email" placeholder="patient@example.com" required>
@@ -79,74 +38,104 @@
                 <label for="password">Password</label>
                 <input type="password" id="password" placeholder="Enter password" required>
             </div>
-            <button type="submit" class="btn-primary" id="loginBtn">Sign In</button>
+            
+            <button type="submit" class="btn-primary" id="submitBtn">Sign In</button>
             <p id="errorMessage" class="error-msg"></p>
+            
+            <div class="toggle-link">
+                <p id="toggleText">New patient? <span id="toggleBtn">Create Account</span></p>
+            </div>
         </form>
     </div>
 
     <script type="module">
-        // Import from your config file
-        import { auth, signInWithEmailAndPassword, onAuthStateChanged } from './firebase.config.js';
+        // FIX 1: Corrected the path to point to assets/js/
+        import { auth, db, signInWithEmailAndPassword, createUserWithEmailAndPassword, setDoc, doc, onAuthStateChanged } from './assets/js/firebase-config.js';
 
-        const loginForm = document.getElementById('loginForm');
+        const authForm = document.getElementById('authForm');
+        const formTitle = document.getElementById('formTitle');
+        const nameGroup = document.getElementById('nameGroup');
+        const fullnameInput = document.getElementById('fullname');
+        const submitBtn = document.getElementById('submitBtn');
+        const toggleBtn = document.getElementById('toggleBtn');
+        const toggleText = document.getElementById('toggleText');
         const errorMsg = document.getElementById('errorMessage');
-        const loginBtn = document.getElementById('loginBtn');
 
-        // 1. Check if user is ALREADY logged in
+        let isLogin = true;
+
+        // Check if already logged in
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                console.log("User already logged in:", user.email);
-                // Redirect to dashboard if already logged in
-                // window.location.href = "dashboard.html"; 
-                errorMsg.style.color = "green";
-                errorMsg.style.display = "block";
-                errorMsg.innerText = "Already logged in as: " + user.email;
+                // Auto-redirect if user is already logged in
+                window.location.href = "dashboard.html"; 
             }
         });
 
-        // 2. Handle Login Submit
-        loginForm.addEventListener('submit', async (e) => {
+        // Toggle between Login and Register
+        toggleBtn.addEventListener('click', () => {
+            isLogin = !isLogin;
+            errorMsg.style.display = 'none';
+            if (isLogin) {
+                formTitle.innerText = "KHS Clinic Login";
+                submitBtn.innerText = "Sign In";
+                nameGroup.classList.add('hidden');
+                fullnameInput.removeAttribute('required');
+                toggleText.innerHTML = 'New patient? <span id="toggleBtn">Create Account</span>';
+            } else {
+                formTitle.innerText = "Patient Registration";
+                submitBtn.innerText = "Sign Up";
+                nameGroup.classList.remove('hidden');
+                fullnameInput.setAttribute('required', 'true');
+                toggleText.innerHTML = 'Already have an account? <span id="toggleBtn">Login here</span>';
+            }
+            // Re-attach listener to new span (since innerHTML replaced it)
+            document.getElementById('toggleBtn').addEventListener('click', toggleBtn.click.bind(toggleBtn)); 
+        });
+
+        authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
+            const fullname = fullnameInput.value;
 
-            // Reset error
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Processing...";
             errorMsg.style.display = 'none';
-            loginBtn.innerText = "Signing in...";
-            loginBtn.disabled = true;
 
             try {
-                const userCredential = await signInWithEmailAndPassword(auth, email, password);
-                const user = userCredential.user;
-                
-                // Success
-                console.log("Login Successful:", user);
-                alert("Login Successful! Welcome " + user.email);
-                
-                // Redirect to dashboard (Create this file later)
-                // window.location.href = "dashboard.html"; 
-
-            } catch (error) {
-                console.error("Login Error:", error.code, error.message);
-                
-                // Show error to user
-                errorMsg.style.display = 'block';
-                errorMsg.style.color = 'red';
-                
-                if (error.code === 'auth/user-not-found') {
-                    errorMsg.innerText = "No user found with this email.";
-                } else if (error.code === 'auth/wrong-password') {
-                    errorMsg.innerText = "Incorrect password.";
+                if (isLogin) {
+                    // LOGIN LOGIC
+                    await signInWithEmailAndPassword(auth, email, password);
+                    // Redirect is handled by onAuthStateChanged
                 } else {
-                    errorMsg.innerText = "Error: " + error.message;
+                    // REGISTRATION LOGIC
+                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    const user = userCredential.user;
+
+                    // FIX 2: Save user details to Firestore so Dashboard can read it
+                    await setDoc(doc(db, "Users", user.uid), {
+                        fullName: fullname,
+                        email: email,
+                        role: "patient",
+                        createdAt: new Date()
+                    });
+                    
+                    alert("Account created successfully!");
+                    // Redirect is handled by onAuthStateChanged
                 }
-            } finally {
-                loginBtn.innerText = "Sign In";
-                loginBtn.disabled = false;
+            } catch (error) {
+                console.error(error);
+                errorMsg.style.display = 'block';
+                // Simple error handling
+                if(error.code === 'auth/email-already-in-use') errorMsg.innerText = "Email is already registered.";
+                else if(error.code === 'auth/wrong-password') errorMsg.innerText = "Incorrect password.";
+                else if(error.code === 'auth/user-not-found') errorMsg.innerText = "User not found.";
+                else errorMsg.innerText = error.message;
+                
+                submitBtn.disabled = false;
+                submitBtn.innerText = isLogin ? "Sign In" : "Sign Up";
             }
         });
     </script>
-
 </body>
 </html>
