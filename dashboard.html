@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KHS Clinic - Dashboard</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header class="dash-header">
+            <div>
+                <h1 style="color: var(--primary-color);">KHS Clinic</h1>
+                <p id="welcomeMsg">Welcome back, Patient</p>
+            </div>
+            <button id="logoutBtn" class="btn btn-outline">Logout</button>
+        </header>
+
+        <section class="stats-grid">
+            <div class="card">
+                <h3>Monthly Visits</h3>
+                <canvas id="visitChart"></canvas>
+            </div>
+            <div class="card">
+                <h3>Patient Demographics</h3>
+                <canvas id="ageChart"></canvas>
+            </div>
+        </section>
+
+        <section>
+            <h3 style="margin-bottom: 1rem;">Quick Actions</h3>
+            <div class="action-grid">
+                <a href="booking.html" class="card action-card">
+                    <i class="fa-solid fa-calendar-plus"></i>
+                    <span>Book Appointment</span>
+                </a>
+                <div class="card action-card">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span>My Appointments</span>
+                </div>
+                <div class="card action-card">
+                    <i class="fa-solid fa-user-doctor"></i>
+                    <span>Top Doctors</span>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module" src="assets/js/dashboard.js"></script>
+</body>
+</html>
