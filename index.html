@@ -20,7 +20,7 @@
                 <i data-lucide="plus" class="w-10 h-10 text-white font-bold"></i>
             </div>
             <h1 class="text-3xl font-bold text-white tracking-tight">KHX Clinic</h1>
-            <p class="text-red-100 text-sm mt-1 font-medium opacity-90">Patient Portal</p>
+            <p class="text-red-100 text-sm mt-1 font-medium opacity-90">Portal</p>
         </div>
 
         <div class="flex-1 bg-white -mt-8 rounded-t-[2rem] relative z-10 px-8 pt-10 pb-6 flex flex-col">
@@ -39,7 +39,11 @@
                     <label class="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Password</label>
                     <div class="relative">
                         <i data-lucide="lock" class="absolute left-4 top-3.5 w-5 h-5 text-gray-400"></i>
-                        <input type="password" id="password" required class="w-full bg-gray-50 border border-gray-200 rounded-xl py-3.5 pl-12 pr-4 text-sm font-semibold text-gray-800 outline-none focus:ring-2 focus:ring-red-500 transition-all">
+                        <input type="password" id="password" required class="w-full bg-gray-50 border border-gray-200 rounded-xl py-3.5 pl-12 pr-12 text-sm font-semibold text-gray-800 outline-none focus:ring-2 focus:ring-red-500 transition-all">
+                        
+                        <button type="button" id="toggle-password" class="absolute right-4 top-3.5 text-gray-400 hover:text-gray-600 focus:outline-none">
+                            <i data-lucide="eye" class="w-5 h-5" id="eye-icon"></i>
+                        </button>
                     </div>
                 </div>
 
@@ -60,28 +64,67 @@
 
     <script>lucide.createIcons();</script>
     <script type="module">
-        import { auth, signInWithEmailAndPassword, onAuthStateChanged } from './assets/js/firebase-config.js';
+        import { auth, db, signInWithEmailAndPassword, onAuthStateChanged, doc, getDoc } from './assets/js/firebase-config.js';
 
         const loginForm = document.getElementById('login-form');
         const errorMsg = document.getElementById('error-msg');
         const submitBtn = document.getElementById('submit-btn');
+        const passwordInput = document.getElementById('password');
+        const toggleBtn = document.getElementById('toggle-password');
+        const eyeIcon = document.getElementById('eye-icon');
 
-        // Check if already logged in
+        // 1. Password Visibility Toggle Logic
+        toggleBtn.addEventListener('click', () => {
+            const isPassword = passwordInput.type === 'password';
+            passwordInput.type = isPassword ? 'text' : 'password';
+            
+            // Update icon using Lucide's setAttribute/refresh pattern
+            eyeIcon.setAttribute('data-lucide', isPassword ? 'eye-off' : 'eye');
+            lucide.createIcons();
+        });
+
+        // 2. Role-Based Redirect Function
+        async function checkRoleAndRedirect(user) {
+            try {
+                // Fetch user document from Firestore "Users" collection
+                const userDoc = await getDoc(doc(db, "Users", user.uid));
+                
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    // Redirect based on 'role' field in your Firestore
+                    if (userData.role === "admin") {
+                        window.location.href = "admin-dashboard.html";
+                    } else {
+                        window.location.href = "dashboard.html";
+                    }
+                } else {
+                    // Fallback if document doesn't exist
+                    window.location.href = "dashboard.html";
+                }
+            } catch (error) {
+                console.error("Error checking user role:", error);
+                window.location.href = "dashboard.html";
+            }
+        }
+
+        // Check auth state
         onAuthStateChanged(auth, (user) => {
-            if (user) window.location.href = "dashboard.html";
+            if (user) {
+                checkRoleAndRedirect(user);
+            }
         });
 
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
+            const password = passwordInput.value;
 
             submitBtn.innerText = "Verifying...";
             submitBtn.disabled = true;
 
             try {
                 await signInWithEmailAndPassword(auth, email, password);
-                // Redirect handled by onAuthStateChanged
+                // Redirect is handled automatically by onAuthStateChanged
             } catch (error) {
                 console.error(error);
                 errorMsg.innerText = "Invalid email or password.";

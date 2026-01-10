@@ -15,10 +15,11 @@ import {
     where, 
     doc, 
     getDoc, 
-    setDoc 
+    setDoc,
+    updateDoc,  // <-- NEW IMPORT
+    deleteDoc   // <-- NEW IMPORT
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-// Your Original Keys
 const firebaseConfig = {
   apiKey: "AIzaSyDv7UqZfz9J3QtH3LmX58Tpw_fXsciigB4",
   authDomain: "khs-clinic-appointment.firebaseapp.com",
@@ -26,7 +27,6 @@ const firebaseConfig = {
   storageBucket: "khs-clinic-appointment.firebasestorage.app",
   messagingSenderId: "1001118458502",
   appId: "1:1001118458502:web:5e8b2b95ee5098f3702707"
-  
 };
 
 // Initialize Firebase
@@ -49,5 +49,7 @@ export {
     where, 
     doc, 
     getDoc, 
-    setDoc 
+    setDoc,
+    updateDoc, // <-- MUST EXPORT THIS
+    deleteDoc  // <-- MUST EXPORT THIS
 };

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KHX Clinic - Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { -webkit-tap-highlight-color: transparent; background: #f0f2f5; }
+        .mobile-frame { width: 100%; max-width: 375px; height: 812px; background: #f8fafc; margin: 0 auto; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+        @media (min-width: 768px) { .mobile-frame { border-radius: 40px; border: 8px solid #1a1a1a; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); height: 812px; margin-top: 2rem; } }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+
+    <div class="mobile-frame">
+        <div class="bg-gradient-to-r from-[#00695C] to-[#4DB6AC] pt-12 pb-16 px-6 relative shrink-0 rounded-b-[2.5rem] shadow-lg z-10">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <p class="text-teal-100 text-sm font-medium opacity-80">Hello,</p>
+                    <h1 class="text-2xl font-bold text-white tracking-tight" id="admin-name">Super Admin</h1>
+                </div>
+                <div class="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white" id="logout-btn">
+                    <i data-lucide="user" class="w-8 h-8"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto no-scrollbar px-6 -mt-8 pb-6 relative z-20 space-y-6">
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-28">
+                    <div class="w-8 h-8 bg-blue-50 rounded-full flex items-center justify-center text-[#00B0FF]">
+                        <i data-lucide="users" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-gray-900" id="total-patients">0</p>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Total Patients</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-28">
+                    <div class="w-8 h-8 bg-orange-50 rounded-full flex items-center justify-center text-[#FFA726]">
+                        <i data-lucide="clock" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-gray-900" id="pending-approvals">0</p>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Pending Approvals</p>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h2 class="text-lg font-bold text-gray-700 mb-4">Quick Actions</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div onclick="location.href='manage-users.html'" 
+                         class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-2 active:scale-95 transition-all text-center cursor-pointer">
+                        <i data-lucide="settings" class="w-8 h-8 text-[#4DB6AC]"></i>
+                        <p class="text-xs font-bold text-gray-600">User Management</p>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-2 active:scale-95 transition-all text-center">
+                        <i data-lucide="calendar" class="w-8 h-8 text-[#7986CB]"></i>
+                        <p class="text-xs font-bold text-gray-600">Doctor Schedule</p>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-2 active:scale-95 transition-all text-center">
+                        <i data-lucide="stethoscope" class="w-8 h-8 text-[#4DD0E1]"></i>
+                        <p class="text-xs font-bold text-gray-600">Clinic Services</p>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-2 active:scale-95 transition-all text-center">
+                        <i data-lucide="bar-chart-3" class="w-8 h-8 text-[#90A4AE]"></i>
+                        <p class="text-xs font-bold text-gray-600">Reports</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>lucide.createIcons();</script>
+    <script type="module" src="assets/js/admin-dashboard.js"></script>
+</body>
+</html>
