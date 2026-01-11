@@ -94,6 +94,9 @@
                     // Redirect based on 'role' field in your Firestore
                     if (userData.role === "admin") {
                         window.location.href = "admin-dashboard.html";
+                        } else if (userData.role === "Doctor") { 
+                // Redirect doctors to the new file you just created
+                window.location.href = "doctor-dashboard.html";
                     } else {
                         window.location.href = "dashboard.html";
                     }

@@ -11,6 +11,7 @@ let bookingData = {
     date: null, 
     time: null 
 };
+let doctorUnavailableDates = []; // NEW: Stores the blocked dates
 
 // --- 1. NAVIGATION LOGIC ---
 window.handleBack = () => {
@@ -113,7 +114,7 @@ async function loadServices() {
     }
 }
 
-// --- 3. LOAD DOCTORS (ROBUST FETCH FIX) ---
+// --- 3. LOAD DOCTORS ---
 async function loadDoctors() {
     const container = document.getElementById('doctor-list');
     
@@ -124,47 +125,35 @@ async function loadDoctors() {
     `;
 
     try {
-        console.log("Fetching all doctors to filter for Service ID:", bookingData.serviceId);
-
-        // 1. Fetch ALL doctors (Fixes query issues with array strings)
         const snapshot = await getDocs(collection(db, "Doctors"));
-        
         container.innerHTML = '';
         
         let doctors = [];
         const selectedId = String(bookingData.serviceId || "");
 
         if (snapshot.empty) {
-            console.warn("Doctors collection is empty.");
             container.innerHTML = `<p class="text-center text-gray-400 py-8">No doctors found in database.</p>`;
             return;
         }
 
-        // 2. Filter in JavaScript
+        // Filter Logic
         snapshot.forEach(doc => {
             const data = doc.data();
-            
-            // Handle various field names you might have used (serviceId, serviceIds, etc.)
-            // and force them to string to check for the ID
             const serviceStr = JSON.stringify(data.serviceId || data.serviceIds || "");
             
-            // Check if the service ID exists within the doctor's service data
             if (serviceStr.includes(selectedId)) {
                 doctors.push({
                     id: doc.id,
-                    // Map fields based on your database screenshot
                     name: data.doctorName || data.name || "Dr. Unknown",
                     role: data.drSpecialization || data.specialization || "Specialist",
                     exp: data.yearOfExperience || data.experience || 5,
                     rating: data.rating || "5.0",
-                    desc: data.description || "Experienced specialist dedicated to patient care."
                 });
             }
         });
 
-        // Fallback: If no match found, show all (Prevents empty screen during testing)
+        // Fallback for testing
         if (doctors.length === 0) {
-            console.warn("No specific match found. Showing all doctors for testing.");
             snapshot.forEach(doc => {
                 const data = doc.data();
                 doctors.push({
@@ -173,12 +162,10 @@ async function loadDoctors() {
                     role: data.drSpecialization || "Specialist",
                     exp: data.yearOfExperience || 5,
                     rating: data.rating || "5.0",
-                    desc: "Experienced specialist."
                 });
             });
         }
 
-        // 3. Render Cards
         doctors.forEach(data => {
             const card = document.createElement('div');
             card.className = "bg-white p-4 rounded-2xl border border-gray-100 shadow-sm mb-3 cursor-pointer hover:border-[#009688] transition-all flex items-center gap-4 group";
@@ -187,11 +174,9 @@ async function loadDoctors() {
                 <div class="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 shrink-0 group-hover:bg-[#e0f2f1] group-hover:text-[#009688] transition-colors">
                     <i data-lucide="user" class="w-7 h-7"></i>
                 </div>
-                
                 <div class="flex-1">
                     <h3 class="font-bold text-[#004d40] text-lg leading-tight">${data.name}</h3>
                     <p class="text-xs font-bold text-[#009688] uppercase tracking-wide mb-1">${data.role}</p>
-                    
                     <div class="flex items-center gap-3 text-xs text-gray-400">
                         <div class="flex items-center gap-1 text-amber-500">
                             <i data-lucide="star" class="w-3 h-3 fill-current"></i>
@@ -201,15 +186,23 @@ async function loadDoctors() {
                         <div>${data.exp} Years Exp.</div>
                     </div>
                 </div>
-                
                 <i data-lucide="chevron-right" class="w-5 h-5 text-gray-300"></i>
             `;
             
-            card.addEventListener('click', () => {
+            card.addEventListener('click', async () => {
                 bookingData.doctorId = data.id;
                 bookingData.doctorName = data.name;
+                
+                // --- NEW LOGIC START ---
+                // Show loading text while checking schedule
+                const originalContent = card.innerHTML;
+                card.innerHTML = `<div class="w-full text-center text-sm text-[#009688] font-bold py-4">Checking Schedule...</div>`;
+                
+                await fetchDoctorSchedule(data.id);
+                
                 setupDate();
                 showStep(3);
+                // --- NEW LOGIC END ---
             });
             container.appendChild(card);
         });
@@ -218,24 +211,94 @@ async function loadDoctors() {
 
     } catch (e) {
         console.error("Error loading doctors:", e);
-        container.innerHTML = `<p class="text-center text-red-400 py-8">System Error. Check Console.</p>`;
+        container.innerHTML = `<p class="text-center text-red-400 py-8">System Error.</p>`;
     }
 }
 
-// --- 4. DATE & TIME ---
+// REPLACE THE EXISTING fetchDoctorSchedule AND setupDate FUNCTIONS WITH THESE:
+
+// --- ROBUST HELPER: Fetch Blocked Dates ---
+async function fetchDoctorSchedule(doctorId) {
+    doctorUnavailableDates = []; // Reset
+    console.log(`DEBUG: Fetching schedule for Doctor ID: ${doctorId}`);
+
+    try {
+        const q = query(collection(db, "TimeOff"), where("doctorId", "==", doctorId));
+        const snapshot = await getDocs(q);
+        
+        snapshot.forEach(doc => {
+            // Trim spaces to ensure "14 January 2026" is clean
+            const cleanDate = doc.data().date.trim(); 
+            doctorUnavailableDates.push(cleanDate);
+        });
+
+        console.log("DEBUG: Blocked Dates found in DB:", doctorUnavailableDates);
+    } catch (e) {
+        console.error("DEBUG: Error fetching schedule:", e);
+    }
+}
+
+// --- 4. DATE & TIME (TIMEZONE SAFE VERSION) ---
 function setupDate() {
     const datePicker = document.getElementById('date-picker');
+    const timeSlotContainer = document.getElementById('time-slots'); 
+    
+    // Set min date to today
     datePicker.min = new Date().toISOString().split("T")[0];
-    datePicker.addEventListener('change', (e) => {
-        bookingData.date = e.target.value;
+    datePicker.value = ''; // Reset on load
+    timeSlotContainer.innerHTML = '<p class="text-gray-400 text-sm italic col-span-2">Select a date above to see times.</p>';
+
+    // Remove old listeners to prevent duplicates
+    const newPicker = datePicker.cloneNode(true);
+    datePicker.parentNode.replaceChild(newPicker, datePicker);
+
+    newPicker.onchange = (e) => {
+        const rawDate = e.target.value; // Format: "2026-01-14"
+        if (!rawDate) return;
+
+        // --- THE FIX: MANUAL PARSING (Avoids Timezone Issues) ---
+        const [year, month, day] = rawDate.split('-'); 
+        // Note: split gives strings like "2026", "01", "14"
+
+        const monthIndex = parseInt(month) - 1; // 0 for Jan, 1 for Feb
+        const dayNumber = parseInt(day); // Removes leading zero (e.g., "04" -> 4)
+
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        
+        // Construct the string exactly like the Doctor Dashboard does
+        // Format: "14 January 2026"
+        const formattedDate = `${dayNumber} ${monthNames[monthIndex]} ${year}`;
+
+        console.log(`DEBUG: You selected: ${formattedDate}`);
+        console.log(`DEBUG: Checking against blocked list:`, doctorUnavailableDates);
+
+        // --- CHECK IF BLOCKED ---
+        if (doctorUnavailableDates.includes(formattedDate)) {
+            console.warn("DEBUG: MATCH FOUND! Blocking date.");
+            
+            // 1. Show Error Alert
+            alert(`Dr. ${bookingData.doctorName} is unavailable on ${formattedDate}.\nPlease choose another date.`);
+            
+            // 2. Clear the Input
+            e.target.value = ''; 
+            
+            // 3. Clear Time Slots
+            timeSlotContainer.innerHTML = '<p class="text-red-500 font-bold text-sm italic col-span-2">Date unavailable. Please pick another.</p>';
+            return;
+        }
+
+        // If safe, proceed
+        console.log("DEBUG: Date is available.");
+        bookingData.date = rawDate;
         renderTimeSlots();
-    });
+    };
 }
 
 function renderTimeSlots() {
     const container = document.getElementById('time-slots');
     const slots = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
     container.innerHTML = '';
+    
     slots.forEach(time => {
         const btn = document.createElement('button');
         btn.type = 'button';
@@ -243,7 +306,13 @@ function renderTimeSlots() {
         btn.innerText = time;
         btn.onclick = (e) => {
             e.preventDefault(); 
-            confirmBooking(time);
+            // Highlight Selection
+            Array.from(container.children).forEach(c => c.classList.remove('bg-[#009688]', 'text-white'));
+            btn.classList.add('bg-[#009688]', 'text-white');
+            
+            // Confirm immediately or allow user to click a separate 'Next' button
+            // Keeping your original flow:
+            setTimeout(() => confirmBooking(time), 300); 
         };
         container.appendChild(btn);
     });
