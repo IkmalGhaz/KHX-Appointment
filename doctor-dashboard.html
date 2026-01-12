@@ -104,7 +104,7 @@
             try {
                 const docRef = await getDoc(doc(db, "Users", uid));
                 if (docRef.exists()) {
-                    doctorNameEl.textContent = `Dr. ${docRef.data().fullName || "Doctor"}`;
+                    doctorNameEl.textContent = `${docRef.data().doctorName || "Doctor"}`;
                 }
             } catch (e) { console.error(e); }
         }

@@ -1,5 +1,9 @@
 import { db, collection, getDocs, query, where, addDoc, auth, onAuthStateChanged } from './firebase-config.js';
 
+// HELPER: Normalize date for comparison (removes spaces, makes lowercase)
+function normalizeDate(dateStr) {
+    return dateStr.toLowerCase().replace(/\s+/g, '');
+}
 // --- STATE MANAGEMENT ---
 let currentStep = 1;
 let bookingData = { 
@@ -252,46 +256,37 @@ function setupDate() {
     const newPicker = datePicker.cloneNode(true);
     datePicker.parentNode.replaceChild(newPicker, datePicker);
 
-    newPicker.onchange = (e) => {
-        const rawDate = e.target.value; // Format: "2026-01-14"
-        if (!rawDate) return;
+    // Inside setupDate function...
+newPicker.onchange = (e) => {
+    const rawDate = e.target.value; 
+    if (!rawDate) return;
 
-        // --- THE FIX: MANUAL PARSING (Avoids Timezone Issues) ---
-        const [year, month, day] = rawDate.split('-'); 
-        // Note: split gives strings like "2026", "01", "14"
+    // ... (Your existing code to get dayNumber, monthIndex, year) ...
+    const [year, month, day] = rawDate.split('-');
+    const monthIndex = parseInt(month) - 1;
+    const dayNumber = parseInt(day);
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    
+    // 1. Construct the pretty string
+    const displayDate = `${dayNumber} ${monthNames[monthIndex]} ${year}`;
+    
+    // 2. Create the normalized version for checking
+    const comparisonDate = normalizeDate(displayDate);
 
-        const monthIndex = parseInt(month) - 1; // 0 for Jan, 1 for Feb
-        const dayNumber = parseInt(day); // Removes leading zero (e.g., "04" -> 4)
+    console.log(`Checking: "${comparisonDate}" against list:`, doctorUnavailableDates);
 
-        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-        
-        // Construct the string exactly like the Doctor Dashboard does
-        // Format: "14 January 2026"
-        const formattedDate = `${dayNumber} ${monthNames[monthIndex]} ${year}`;
+    // 3. Compare the NORMALIZED versions
+    if (doctorUnavailableDates.includes(comparisonDate)) {
+        alert(`Dr. ${bookingData.doctorName} is unavailable on ${displayDate}.\nPlease choose another date.`);
+        e.target.value = ''; 
+        timeSlotContainer.innerHTML = '<p class="text-red-500 font-bold text-sm italic col-span-2">Date unavailable.</p>';
+        return;
+    }
 
-        console.log(`DEBUG: You selected: ${formattedDate}`);
-        console.log(`DEBUG: Checking against blocked list:`, doctorUnavailableDates);
-
-        // --- CHECK IF BLOCKED ---
-        if (doctorUnavailableDates.includes(formattedDate)) {
-            console.warn("DEBUG: MATCH FOUND! Blocking date.");
-            
-            // 1. Show Error Alert
-            alert(`Dr. ${bookingData.doctorName} is unavailable on ${formattedDate}.\nPlease choose another date.`);
-            
-            // 2. Clear the Input
-            e.target.value = ''; 
-            
-            // 3. Clear Time Slots
-            timeSlotContainer.innerHTML = '<p class="text-red-500 font-bold text-sm italic col-span-2">Date unavailable. Please pick another.</p>';
-            return;
-        }
-
-        // If safe, proceed
-        console.log("DEBUG: Date is available.");
-        bookingData.date = rawDate;
-        renderTimeSlots();
-    };
+    // If safe, proceed
+    bookingData.date = rawDate; // Keep the YYYY-MM-DD for the database save
+    renderTimeSlots();
+};
 }
 
 function renderTimeSlots() {
