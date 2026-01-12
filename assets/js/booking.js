@@ -36,14 +36,15 @@ function showStep(step) {
 }
 
 function updateHeader(step) {
-    const titles = ["Choose a Service", "Choose Your Doctor", "Select Date & Time", "Confirmed"];
-    const subs = ["Select the type of care you need", "Select a specialist", "When would you like to come?", "You are all set!"];
+    const titles = ["Choose Service", "Choose Doctor", "Date & Time", "Payment", "Success"];
+    const subs = ["Select care type", "Select specialist", "When to come?", "Review & Pay", "All done!"];
     
     document.getElementById('step-lbl').innerText = step;
     document.getElementById('page-title').innerText = titles[step-1] || "Booking";
     document.getElementById('page-subtitle').innerText = subs[step-1] || "";
     
-    const percent = Math.min((step / 3) * 100, 100);
+    // Progress for 5 steps (20%, 40%, 60%, 80%, 100%)
+    const percent = Math.min((step / 4) * 100, 100); 
     document.getElementById('progress-bar').style.width = `${percent}%`;
 }
 
@@ -222,8 +223,9 @@ async function loadDoctors() {
 // REPLACE THE EXISTING fetchDoctorSchedule AND setupDate FUNCTIONS WITH THESE:
 
 // --- ROBUST HELPER: Fetch Blocked Dates ---
+// --- ROBUST HELPER: Fetch Blocked Dates ---
 async function fetchDoctorSchedule(doctorId) {
-    doctorUnavailableDates = []; // Reset
+    doctorUnavailableDates = []; // Reset list
     console.log(`DEBUG: Fetching schedule for Doctor ID: ${doctorId}`);
 
     try {
@@ -231,12 +233,16 @@ async function fetchDoctorSchedule(doctorId) {
         const snapshot = await getDocs(q);
         
         snapshot.forEach(doc => {
-            // Trim spaces to ensure "14 January 2026" is clean
-            const cleanDate = doc.data().date.trim(); 
-            doctorUnavailableDates.push(cleanDate);
+            const rawDate = doc.data().date; // e.g., "14 January 2026"
+            
+            // FIX: Normalize the database date immediately!
+            // This turns "14 January 2026" into "14january2026"
+            const normalized = normalizeDate(rawDate); 
+            
+            doctorUnavailableDates.push(normalized);
         });
 
-        console.log("DEBUG: Blocked Dates found in DB:", doctorUnavailableDates);
+        console.log("DEBUG: Blocked Dates (Normalized):", doctorUnavailableDates);
     } catch (e) {
         console.error("DEBUG: Error fetching schedule:", e);
     }
@@ -300,44 +306,91 @@ function renderTimeSlots() {
         btn.className = "bg-white border border-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-[#009688] hover:text-white transition-all";
         btn.innerText = time;
         btn.onclick = (e) => {
-            e.preventDefault(); 
-            // Highlight Selection
-            Array.from(container.children).forEach(c => c.classList.remove('bg-[#009688]', 'text-white'));
-            btn.classList.add('bg-[#009688]', 'text-white');
-            
-            // Confirm immediately or allow user to click a separate 'Next' button
-            // Keeping your original flow:
-            setTimeout(() => confirmBooking(time), 300); 
-        };
+             e.preventDefault(); 
+    
+    // Visual Highlight
+    Array.from(container.children).forEach(c => c.classList.remove('bg-[#009688]', 'text-white'));
+    btn.classList.add('bg-[#009688]', 'text-white');
+    
+    // STORE DATA & GO TO PAYMENT (Don't save to DB yet)
+    bookingData.time = time;
+    setTimeout(() => setupPaymentScreen(), 300); // Calls the new function
+};
         container.appendChild(btn);
     });
 }
 
-// --- 5. CONFIRMATION ---
-async function confirmBooking(time) {
-    if(!confirm(`Confirm booking on ${bookingData.date} at ${time}?`)) return;
+
+// --- 6. PAYMENT LOGIC (NEW) ---
+let selectedMethod = 'card';
+
+function setupPaymentScreen() {
+    // 1. Fill in the summary details
+    document.getElementById('pay-service').innerText = bookingData.serviceName;
+    document.getElementById('pay-doctor').innerText = bookingData.doctorName;
+    document.getElementById('pay-date').innerText = `${bookingData.date} @ ${bookingData.time}`;
+    document.getElementById('pay-price').innerText = `RM ${bookingData.price}`;
     
-    try {
-        const user = auth.currentUser;
-        if(user) {
-            await addDoc(collection(db, "bookings"), {
-                patientId: user.uid,
-                doctorName: bookingData.doctorName || "Assigned Doctor",
-                doctorId: bookingData.doctorId,
-                serviceName: bookingData.serviceName,
-                price: bookingData.price,
-                date: bookingData.date,
-                time: time,
-                status: "Upcoming",
-                createdAt: new Date()
-            });
-        }
-        showStep(4);
-    } catch(e) {
-        console.error("Booking failed", e);
-        showStep(4);
-    }
+    document.getElementById('pay-btn-main').innerText = `Pay RM ${bookingData.price}`;
+
+    // 2. Show Step 4
+    showStep(4);
 }
+
+// User selects Card, FPX, or E-Wallet
+window.selectPayment = (method) => {
+    selectedMethod = method;
+    // Reset all buttons to white
+    document.querySelectorAll('.pay-btn').forEach(btn => {
+        btn.className = "pay-btn flex-1 py-3 border border-gray-200 bg-white text-gray-500 rounded-xl text-sm font-bold";
+    });
+    // Highlight selected button to Teal
+    document.getElementById(`btn-${method}`).className = "pay-btn flex-1 py-3 border border-[#009688] bg-[#e0f2f1] text-[#009688] rounded-xl text-sm font-bold shadow-sm";
+};
+
+// Final Save to Firebase
+window.processPayment = async () => {
+    const btn = document.getElementById('pay-btn-main');
+    const originalText = btn.innerText;
+    
+    // Loading Animation
+    btn.innerHTML = "Processing...";
+    btn.disabled = true;
+
+    // Fake delay to look like banking process
+    setTimeout(async () => {
+        try {
+            const user = auth.currentUser;
+            if (user) {
+                // SAVE TO FIREBASE
+                await addDoc(collection(db, "bookings"), {
+                    patientId: user.uid,
+                    doctorName: bookingData.doctorName,
+                    doctorId: bookingData.doctorId,
+                    serviceName: bookingData.serviceName,
+                    price: bookingData.price,
+                    date: bookingData.date,
+                    time: bookingData.time,
+                    
+                    // New Payment Fields
+                    paymentMethod: selectedMethod, // 'card', 'fpx', 'wallet'
+                    paymentStatus: "Paid",
+                    
+                    status: "Upcoming",
+                    createdAt: new Date()
+                });
+            }
+            // Go to Success Screen (Step 5)
+            showStep(5);
+            
+        } catch (e) {
+            console.error("Booking failed", e);
+            alert("Payment failed. Please try again.");
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
+    }, 1500); // 1.5 second delay
+};
 
 // --- INITIALIZATION ---
 onAuthStateChanged(auth, (user) => {
