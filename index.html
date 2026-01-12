@@ -15,23 +15,25 @@
 <body class="flex items-center justify-center min-h-screen">
 
     <div class="mobile-frame">
-        <div class="bg-red-600 h-64 flex flex-col items-center justify-center relative shrink-0">
-            <div class="w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center mb-4 border-2 border-white/30 shadow-lg">
-                <i data-lucide="plus" class="w-10 h-10 text-white font-bold"></i>
+        <div class="bg-[#009688] h-64 flex flex-col items-center justify-center relative shrink-0">
+            
+            <div class="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-4 shadow-lg overflow-hidden p-2">
+                <img src="assets/js/images/logo.png" alt="Logo" class="w-full h-full object-contain">
             </div>
-            <h1 class="text-3xl font-bold text-white tracking-tight">KHX Clinic</h1>
-            <p class="text-red-100 text-sm mt-1 font-medium opacity-90">Portal</p>
+
+            <h1 class="text-3xl font-bold text-white tracking-tight">KHS Clinic</h1>
+            <p class="text-teal-100 text-sm mt-1 font-medium opacity-90">Patient Portal</p>
         </div>
 
         <div class="flex-1 bg-white -mt-8 rounded-t-[2rem] relative z-10 px-8 pt-10 pb-6 flex flex-col">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6">Welcome Back</h2>
+            <h2 class="text-2xl font-bold text-[#004d40] mb-6">Welcome Back</h2>
 
             <form id="login-form" class="space-y-5">
                 <div class="space-y-1">
                     <label class="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Email</label>
                     <div class="relative">
                         <i data-lucide="mail" class="absolute left-4 top-3.5 w-5 h-5 text-gray-400"></i>
-                        <input type="email" id="email" required class="w-full bg-gray-50 border border-gray-200 rounded-xl py-3.5 pl-12 pr-4 text-sm font-semibold text-gray-800 outline-none focus:ring-2 focus:ring-red-500 transition-all">
+                        <input type="email" id="email" required class="w-full bg-gray-50 border border-gray-200 rounded-xl py-3.5 pl-12 pr-4 text-sm font-semibold text-gray-800 outline-none focus:ring-2 focus:ring-[#009688] transition-all">
                     </div>
                 </div>
 
@@ -39,7 +41,7 @@
                     <label class="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Password</label>
                     <div class="relative">
                         <i data-lucide="lock" class="absolute left-4 top-3.5 w-5 h-5 text-gray-400"></i>
-                        <input type="password" id="password" required class="w-full bg-gray-50 border border-gray-200 rounded-xl py-3.5 pl-12 pr-12 text-sm font-semibold text-gray-800 outline-none focus:ring-2 focus:ring-red-500 transition-all">
+                        <input type="password" id="password" required class="w-full bg-gray-50 border border-gray-200 rounded-xl py-3.5 pl-12 pr-12 text-sm font-semibold text-gray-800 outline-none focus:ring-2 focus:ring-[#009688] transition-all">
                         
                         <button type="button" id="toggle-password" class="absolute right-4 top-3.5 text-gray-400 hover:text-gray-600 focus:outline-none">
                             <i data-lucide="eye" class="w-5 h-5" id="eye-icon"></i>
@@ -47,16 +49,16 @@
                     </div>
                 </div>
 
-                <p id="error-msg" class="text-xs font-bold text-red-600 text-center min-h-[20px]"></p>
+                <p id="error-msg" class="text-xs font-bold text-red-500 text-center min-h-[20px]"></p>
 
-                <button type="submit" id="submit-btn" class="w-full bg-red-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-red-200 active:scale-95 transition-all flex justify-center items-center gap-2">
+                <button type="submit" id="submit-btn" class="w-full bg-[#009688] hover:bg-[#00796b] text-white font-bold py-4 rounded-xl shadow-lg shadow-teal-200 active:scale-95 transition-all flex justify-center items-center gap-2">
                     Sign In <i data-lucide="arrow-right" class="w-4 h-4"></i>
                 </button>
             </form>
 
             <div class="mt-auto pt-6 text-center">
                 <p class="text-sm font-medium text-gray-500">
-                    New Patient? <a href="register.html" class="text-red-600 font-bold hover:underline">Create Account</a>
+                    New Patient? <a href="register.html" class="text-[#009688] font-bold hover:underline">Create Account</a>
                 </p>
             </div>
         </div>
@@ -77,8 +79,6 @@
         toggleBtn.addEventListener('click', () => {
             const isPassword = passwordInput.type === 'password';
             passwordInput.type = isPassword ? 'text' : 'password';
-            
-            // Update icon using Lucide's setAttribute/refresh pattern
             eyeIcon.setAttribute('data-lucide', isPassword ? 'eye-off' : 'eye');
             lucide.createIcons();
         });
@@ -86,22 +86,18 @@
         // 2. Role-Based Redirect Function
         async function checkRoleAndRedirect(user) {
             try {
-                // Fetch user document from Firestore "Users" collection
                 const userDoc = await getDoc(doc(db, "Users", user.uid));
                 
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
-                    // Redirect based on 'role' field in your Firestore
                     if (userData.role === "admin") {
                         window.location.href = "admin-dashboard.html";
-                        } else if (userData.role === "Doctor") { 
-                // Redirect doctors to the new file you just created
-                window.location.href = "doctor-dashboard.html";
+                    } else if (userData.role === "Doctor") { 
+                        window.location.href = "doctor-dashboard.html";
                     } else {
                         window.location.href = "dashboard.html";
                     }
                 } else {
-                    // Fallback if document doesn't exist
                     window.location.href = "dashboard.html";
                 }
             } catch (error) {
@@ -127,7 +123,6 @@
 
             try {
                 await signInWithEmailAndPassword(auth, email, password);
-                // Redirect is handled automatically by onAuthStateChanged
             } catch (error) {
                 console.error(error);
                 errorMsg.innerText = "Invalid email or password.";
