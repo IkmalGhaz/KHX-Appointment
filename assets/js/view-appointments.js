@@ -1,7 +1,14 @@
 import { auth, db, onAuthStateChanged, collection, query, where, getDocs, updateDoc, doc } from './firebase-config.js';
 
 let currentTab = 'Upcoming';
+let appointmentToCancel = null; // Store ID globally for the modals
 const aptList = document.getElementById('appointments-list');
+
+// Modal Elements
+const cancelModal = document.getElementById('cancel-confirm-modal');
+const reasonInput = document.getElementById('cancel-reason-input');
+const confirmBtn = document.getElementById('confirm-cancel-btn'); // Button in the reason modal
+const finalConfirmBtn = document.getElementById('final-confirm-btn'); // Button in the red confirmation modal
 
 onAuthStateChanged(auth, (user) => {
     if (user) {
@@ -9,10 +16,84 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-// Tab Switcher Logic
+// --- CANCELLATION MODAL LOGIC ---
+
+// 1. Open Reason Modal when 'Cancel' is clicked on an appointment card
+window.cancelBooking = (id) => {
+    appointmentToCancel = id;
+    reasonInput.value = ''; // Clear previous input
+    cancelModal.classList.remove('hidden');
+};
+
+// Close Reason Modal
+window.closeCancelModal = () => {
+    cancelModal.classList.add('hidden');
+    appointmentToCancel = null;
+};
+
+// 2. When 'Confirm' is clicked in Reason Modal -> Show Red Confirmation Pop-up
+if (confirmBtn) {
+    confirmBtn.onclick = () => {
+        const reason = reasonInput.value.trim();
+        if (!reason) {
+            alert("Please enter a reason for cancellation.");
+            return;
+        }
+        // Hide reason modal and show the soft transparent red confirmation modal
+        cancelModal.classList.add('hidden');
+        document.getElementById('booking-confirm-modal').classList.remove('hidden');
+    };
+}
+
+// 3. When 'Yes, Confirm Now' is clicked in Red Modal -> Wait 3s -> Update Firestore
+if (finalConfirmBtn) {
+    finalConfirmBtn.onclick = async () => {
+        const reason = reasonInput.value.trim();
+
+        // Update button UI to show countdown/loading
+        finalConfirmBtn.innerText = "Confirming in 3s...";
+        finalConfirmBtn.disabled = true;
+
+        // 3-second delay before processing
+        setTimeout(async () => {
+            try {
+                finalConfirmBtn.innerText = "Processing...";
+
+                const aptRef = doc(db, "bookings", appointmentToCancel);
+                await updateDoc(aptRef, {
+                    status: 'Cancelled',
+                    cancellationReason: reason,
+                    cancelledAt: new Date()
+                });
+
+                alert("Appointment successfully cancelled.");
+
+                // Hide modal and refresh data
+                document.getElementById('booking-confirm-modal').classList.add('hidden');
+                location.reload();
+            } catch (error) {
+                console.error("Cancellation Error:", error);
+                alert("Failed to cancel: " + error.message);
+
+                // Reset button state on error
+                finalConfirmBtn.innerText = "Yes, Confirm Now";
+                finalConfirmBtn.disabled = false;
+            }
+        }, 3000);
+    };
+}
+
+// Helper to close the red confirmation modal
+window.closeConfirmModal = () => {
+    document.getElementById('booking-confirm-modal').classList.add('hidden');
+    // If user goes back from red modal, reopen the reason modal
+    cancelModal.classList.remove('hidden');
+};
+
+// --- APPOINTMENT LIST & TAB LOGIC ---
+
 window.switchTab = (tab) => {
     currentTab = tab;
-    // Update UI active state
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.remove('border-[#009688]', 'text-[#009688]');
         btn.classList.add('border-transparent', 'text-gray-400');
@@ -20,7 +101,8 @@ window.switchTab = (tab) => {
     event.target.classList.add('border-[#009688]', 'text-[#009688]');
     event.target.classList.remove('border-transparent', 'text-gray-400');
 
-    onAuthStateChanged(auth, (user) => { if (user) loadAppointments(user.uid); });
+    const user = auth.currentUser;
+    if (user) loadAppointments(user.uid);
 };
 
 async function loadAppointments(uid) {
@@ -74,10 +156,3 @@ function getStatusStyle(status) {
     if (status === 'Cancelled') return 'bg-red-50 text-red-600';
     return 'bg-gray-50 text-gray-600';
 }
-
-window.cancelBooking = async (id) => {
-    if (confirm("Cancel this appointment?")) {
-        await updateDoc(doc(db, "bookings", id), { status: 'Cancelled' });
-        location.reload();
-    }
-};
