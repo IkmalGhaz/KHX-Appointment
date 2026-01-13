@@ -66,7 +66,7 @@
 
     <script>lucide.createIcons();</script>
     <script type="module">
-        import { auth, db, signInWithEmailAndPassword, onAuthStateChanged, doc, getDoc } from './assets/js/firebase-config.js';
+        import { auth, db, signInWithEmailAndPassword, signOut, doc, getDoc } from './assets/js/firebase-config.js';
 
         const loginForm = document.getElementById('login-form');
         const errorMsg = document.getElementById('error-msg');
@@ -75,7 +75,11 @@
         const toggleBtn = document.getElementById('toggle-password');
         const eyeIcon = document.getElementById('eye-icon');
 
-        // 1. Password Visibility Toggle Logic
+        // 1. Force Sign Out on page load to prevent auto-login
+        // This clears any existing session from the browser's local storage.
+        signOut(auth).catch(err => console.error("Sign out error:", err));
+
+        // 2. Password Visibility Toggle Logic
         toggleBtn.addEventListener('click', () => {
             const isPassword = passwordInput.type === 'password';
             passwordInput.type = isPassword ? 'text' : 'password';
@@ -83,19 +87,20 @@
             lucide.createIcons();
         });
 
-        // 2. Updated Role-Based Redirect Function
+        // 3. Role-Based Redirect Function
         async function checkRoleAndRedirect(user) {
             try {
                 const userDoc = await getDoc(doc(db, "Users", user.uid));
                 
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
+                    // Redirection based on user role defined in Firestore
                     if (userData.role === "admin") {
-                        window.location.href = "admin-dashboard.html"; // Redirects admins
+                        window.location.href = "admin-dashboard.html";
                     } else if (userData.role === "Doctor") { 
-                        window.location.href = "doctor-dashboard.html"; // Redirects doctors
+                        window.location.href = "doctor-dashboard.html";
                     } else if (userData.role === "Staff" || userData.role === "staff") {
-                        window.location.href = "staff-dashboard.html"; // New: Redirects staff members to the staff dashboard
+                        window.location.href = "staff-dashboard.html"; // Redirects to the staff dashboard
                     } else {
                         window.location.href = "dashboard.html"; // Default for patients
                     }
@@ -108,13 +113,7 @@
             }
         }
 
-        // Check auth state
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                checkRoleAndRedirect(user);
-            }
-        });
-
+        // 4. Manual Login Handler
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('email').value;
@@ -124,7 +123,10 @@
             submitBtn.disabled = true;
 
             try {
-                await signInWithEmailAndPassword(auth, email, password); // Authenticates with Firebase
+                // Manually authenticate with Firebase
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                // Trigger the role check only after successful form submission
+                await checkRoleAndRedirect(userCredential.user);
             } catch (error) {
                 console.error(error);
                 errorMsg.innerText = "Invalid email or password.";
