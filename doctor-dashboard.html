@@ -2,282 +2,175 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KHX Clinic - Manage Schedule</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctor Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         body { -webkit-tap-highlight-color: transparent; background: #f0f2f5; }
-        .mobile-frame { width: 100%; max-width: 375px; height: 812px; background: #f8fafc; margin: 0 auto; overflow: hidden; position: relative; display: flex; flex-direction: column; }
-        @media (min-width: 768px) { .mobile-frame { border-radius: 40px; border: 8px solid #1a1a1a; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); height: 812px; margin-top: 2rem; } }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        
-        /* Modal Animation */
-        .modal-enter { opacity: 0; transform: scale(0.95); pointer-events: none; }
-        .modal-active { opacity: 1; transform: scale(1); pointer-events: auto; }
-        .transition-modal { transition: all 0.2s ease-out; }
+        .mobile-frame { width: 100%; max-width: 375px; min-height: 812px; background: #ffffff; margin: 0 auto; overflow-x: hidden; position: relative; display: flex; flex-direction: column; }
+        @media (min-width: 768px) { .mobile-frame { border-radius: 40px; border: 8px solid #1a1a1a; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); height: 812px; margin-top: 2rem; overflow-y: auto; } }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen">
+<body class="flex items-center justify-center min-h-screen bg-gray-100">
 
     <div class="mobile-frame">
         
-        <div class="bg-gradient-to-r from-[#6200EE] to-[#7C4DFF] pt-12 pb-8 px-6 relative shrink-0 rounded-b-[2.5rem] shadow-lg z-10">
-            <div class="flex justify-between items-center mb-4">
-                <div>
-                    <h1 class="text-2xl font-bold text-white tracking-tight">My Schedule</h1>
-                    <p class="text-purple-100 text-sm font-medium opacity-80" id="doctor-name">Dr. Loading...</p>
+        <div class="bg-[#006978] pt-12 pb-10 rounded-b-[3rem] shadow-lg relative text-center">
+            <div class="flex justify-between items-center px-6 mb-6">
+                <span class="text-white font-semibold text-lg">07:00</span>
+                <div class="flex gap-2">
+                    <i data-lucide="wifi" class="text-white w-5 h-5"></i>
+                    <i data-lucide="battery" class="text-white w-5 h-5"></i>
                 </div>
-                <div onclick="handleLogout()" class="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white cursor-pointer active:scale-95 transition-all">
-                    <i data-lucide="log-out" class="w-5 h-5"></i>
+            </div>
+
+            <div class="flex justify-center mb-4">
+                <div class="w-28 h-28 bg-white rounded-full flex items-center justify-center shadow-lg overflow-hidden border-4 border-[#AEE2E4]">
+                    <img src="assets/js/images/logo.png" alt="Clinic Logo" class="w-full h-full object-cover">
                 </div>
             </div>
             
-            <div class="flex items-center gap-2 mt-2 bg-white/10 p-2 rounded-lg backdrop-blur-sm border border-white/10">
-                <div class="w-2 h-2 rounded-full bg-white"></div>
-                <p class="text-[10px] text-white font-medium">Available</p>
-                <div class="w-2 h-2 rounded-full bg-red-400 ml-2"></div>
-                <p class="text-[10px] text-white font-medium">Unavailable</p>
-                <p class="ml-auto text-[10px] text-purple-100 opacity-75 italic">Tap to change</p>
+            <h1 class="text-[#4FD1C5] font-bold text-lg tracking-widest uppercase mb-1">WELCOME BACK,</h1>
+            <h2 class="text-2xl font-bold text-white tracking-tight" id="doctor-name">Dr. Loading...</h2>
+        </div>
+
+        <div class="px-6 mt-8 space-y-5">
+            
+            <a href="#" class="block group">
+                <div class="bg-[#B2DFDB] p-4 rounded-2xl flex items-center shadow-sm active:scale-95 transition-transform border border-[#80CBC4]">
+                    <div class="p-3 bg-[#006978] rounded-xl mr-4">
+                        <i data-lucide="calendar-days" class="w-8 h-8 text-white"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-[#004D40] font-bold text-lg leading-tight">View Appointments</h3>
+                        <p class="text-[#006978] text-xs opacity-70">See your scheduled patients for today</p>
+                    </div>
+                    <i data-lucide="arrow-right" class="w-6 h-6 text-[#006978]"></i>
+                </div>
+            </a>
+
+            <a href="manage-schedule.html" class="block group">
+                <div class="bg-[#B2DFDB] p-4 rounded-2xl flex items-center shadow-sm active:scale-95 transition-transform border border-[#80CBC4]">
+                    <div class="p-3 bg-[#006978] rounded-xl mr-4">
+                        <i data-lucide="settings" class="w-8 h-8 text-white"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-[#004D40] font-bold text-lg leading-tight">Update Schedule</h3>
+                        <p class="text-[#006978] text-xs opacity-70">Manage your working hours & availability</p>
+                    </div>
+                    <i data-lucide="arrow-right" class="w-6 h-6 text-[#006978]"></i>
+                </div>
+            </a>
+
+        </div>
+
+        <div class="px-6 mt-8">
+            <h3 class="text-[#006978] font-medium text-sm flex items-center gap-2 mb-3">
+                <i data-lucide="heart" class="w-4 h-4"></i> Patient Feedback & Reputation
+            </h3>
+            
+            <div class="bg-[#B2DFDB] rounded-xl p-4 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="star" class="w-8 h-8 text-yellow-500 fill-yellow-500"></i>
+                        <div>
+                            <span class="text-3xl font-bold text-[#004D40]">4.8</span>
+                            <span class="text-xl font-bold text-[#006978] opacity-60">/5.00</span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="block text-2xl font-bold text-[#004D40]">127</span>
+                        <span class="text-xs text-[#006978] font-medium">Total Reviews</span>
+                    </div>
+                </div>
+                <div class="w-full bg-white/30 h-1.5 rounded-full mt-2">
+                    <div class="bg-[#006978] h-1.5 rounded-full w-[90%]"></div>
+                </div>
             </div>
         </div>
 
-        <div class="flex-1 overflow-y-auto no-scrollbar px-5 -mt-4 pb-6 relative z-20 pt-4" id="calendar-container">
-            </div>
+        <div class="px-6 mt-6 pb-8">
+            <h3 class="text-[#006978] font-bold text-lg mb-3 flex items-center gap-2">
+                <i data-lucide="quote" class="w-5 h-5"></i> Recent Patient Reviews
+            </h3>
 
-        <div id="confirm-modal" class="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm modal-enter transition-modal">
-            <div class="bg-white w-[85%] rounded-2xl p-6 shadow-2xl transform transition-all">
-                <div class="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mb-4 mx-auto">
-                    <i data-lucide="alert-circle" class="w-6 h-6 text-red-500"></i>
+            <div class="bg-[#CFE8E9] p-4 rounded-xl mb-3">
+                <div class="flex justify-between items-start mb-1">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-[#006978] rounded-full flex items-center justify-center text-white text-xs font-bold">NH</div>
+                        <div>
+                            <p class="text-sm font-bold text-[#004D40]">Nadya Hana</p>
+                            <p class="text-[10px] text-[#006978] opacity-70">2 days ago</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-0.5">
+                        <i data-lucide="star" class="w-3 h-3 text-yellow-500 fill-yellow-500"></i>
+                        <i data-lucide="star" class="w-3 h-3 text-yellow-500 fill-yellow-500"></i>
+                        <i data-lucide="star" class="w-3 h-3 text-yellow-500 fill-yellow-500"></i>
+                        <i data-lucide="star" class="w-3 h-3 text-yellow-500 fill-yellow-500"></i>
+                        <i data-lucide="star" class="w-3 h-3 text-yellow-500 fill-yellow-500"></i>
+                    </div>
                 </div>
-                <h3 class="text-lg font-bold text-gray-900 text-center mb-2" id="modal-title">Confirm Action</h3>
-                <p class="text-sm text-gray-500 text-center mb-6" id="modal-desc">
-                    Are you sure you want to mark this date as unavailable?
-                </p>
-                <div class="grid grid-cols-2 gap-3">
-                    <button onclick="closeModal()" class="py-3 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">
-                        Cancel
-                    </button>
-                    <button id="confirm-btn" class="py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-200 transition-colors">
-                        Confirm
-                    </button>
-                </div>
+                <p class="text-xs text-[#004D40] italic leading-relaxed">"Dr. was very thorough and took time to explain everything. Highly recommend!"</p>
             </div>
         </div>
 
     </div>
 
-    <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-xl text-sm font-medium opacity-0 transition-opacity pointer-events-none z-50 whitespace-nowrap flex items-center gap-2">
-        <i data-lucide="check-circle" class="w-4 h-4 text-green-400"></i>
-        <span id="toast-msg">Notification</span>
-    </div>
+    <button onclick="handleLogout()" class="fixed bottom-6 right-6 bg-red-500 hover:bg-red-600 text-white p-4 rounded-full shadow-xl transition-all active:scale-90 z-50">
+        <i data-lucide="log-out" class="w-6 h-6"></i>
+    </button>
 
     <script>lucide.createIcons();</script>
     <script type="module">
-        import { auth, db, doc, getDoc, signOut, onAuthStateChanged, collection, addDoc, query, where, getDocs, deleteDoc } from './assets/js/firebase-config.js';
+        import { auth, db, doc, getDoc, signOut, onAuthStateChanged } from './assets/js/firebase-config.js';
 
-        // --- STATE ---
-        let currentDoctorId = null;
-        let pendingAction = null; // Stores data about the date being clicked
-        let existingTimeOff = []; // Cache for unavailable dates
-
-        // --- DOM ELEMENTS ---
-        const doctorNameEl = document.getElementById('doctor-name');
-        const calendarContainer = document.getElementById('calendar-container');
-        const modal = document.getElementById('confirm-modal');
-        const modalTitle = document.getElementById('modal-title');
-        const modalDesc = document.getElementById('modal-desc');
-        const confirmBtn = document.getElementById('confirm-btn');
-
-        // --- 1. INITIALIZATION ---
+        // 1. Check Login Status & Load Name
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                currentDoctorId = user.uid;
-                await loadDoctorProfile(user.uid);
-                await refreshCalendar(); 
+                console.log("Logged in user:", user.uid);
+                await loadDoctorName(user.uid);
             } else {
                 window.location.href = "index.html";
             }
         });
 
-        async function loadDoctorProfile(uid) {
+        // 2. Robust Name Loading Logic
+        async function loadDoctorName(uid) {
             try {
                 const docRef = await getDoc(doc(db, "Users", uid));
                 if (docRef.exists()) {
-                    doctorNameEl.textContent = `${docRef.data().doctorName || "Doctor"}`;
-                }
-            } catch (e) { console.error(e); }
-        }
+                    const data = docRef.data();
+                    console.log("Database Data:", data); // Check Console F12 if still failing
 
-        window.handleLogout = async () => {
-            await signOut(auth);
-            window.location.href = "index.html";
-        };
-
-        // --- 2. CALENDAR RENDERING ---
-        
-        async function refreshCalendar() {
-            calendarContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-40"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div><p class="text-xs text-gray-400 mt-2">Syncing Schedule...</p></div>';
-            
-            // Fetch data freshly from DB
-            existingTimeOff = await fetchTimeOff(currentDoctorId);
-
-            calendarContainer.innerHTML = ''; 
-            const today = new Date();
-            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-
-            for (let i = 0; i < 3; i++) {
-                const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
-                const monthName = monthNames[date.getMonth()];
-                const year = date.getFullYear();
-                
-                const card = document.createElement('div');
-                card.className = "bg-white p-5 rounded-3xl shadow-sm border border-gray-100 mb-6";
-                card.innerHTML = `<h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><i data-lucide="calendar" class="w-4 h-4 text-[#6200EE]"></i> ${monthName} ${year}</h3>`;
-                
-                const daysRow = document.createElement('div');
-                daysRow.className = "grid grid-cols-7 text-center mb-3 border-b border-gray-100 pb-2";
-                ["Su","Mo","Tu","We","Th","Fr","Sa"].forEach(d => {
-                    daysRow.innerHTML += `<span class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">${d}</span>`;
-                });
-                card.appendChild(daysRow);
-
-                const grid = document.createElement('div');
-                grid.className = "grid grid-cols-7 gap-y-3 justify-items-center";
-
-                const daysInMonth = new Date(year, date.getMonth() + 1, 0).getDate();
-                const startDay = new Date(year, date.getMonth(), 1).getDay();
-
-                for(let k=0; k<startDay; k++) grid.appendChild(document.createElement('div'));
-
-                for(let d=1; d<=daysInMonth; d++) {
-                    const btn = document.createElement('div');
-                    const dateStr = `${d} ${monthName} ${year}`;
-                    const isUnavailable = existingTimeOff.includes(dateStr);
-
-                    // Style
-                    if (isUnavailable) {
-                        btn.className = "w-9 h-9 flex items-center justify-center rounded-full text-sm font-bold cursor-pointer transition-all bg-red-50 text-red-500 border border-red-200 shadow-sm";
-                    } else {
-                        btn.className = "w-9 h-9 flex items-center justify-center rounded-full text-sm font-bold cursor-pointer transition-all text-gray-700 hover:bg-gray-50 border border-transparent";
+                    // Try to find the name in different common fields
+                    let name = data.doctorName || data.name || data.fullName || data.username || "Doctor";
+                    
+                    // If the name exists but doesn't start with "Dr.", add it.
+                    // If name is just "Farhan", it becomes "Dr. Farhan"
+                    if (!name.toLowerCase().startsWith('dr') && !name.toLowerCase().startsWith('doctor')) {
+                        name = "Dr. " + name;
                     }
-                    
-                    btn.textContent = d;
-                    
-                    // Click opens MODAL, not direct action
-                    btn.onclick = () => openModal(dateStr, isUnavailable);
-                    
-                    grid.appendChild(btn);
-                }
-                card.appendChild(grid);
-                calendarContainer.appendChild(card);
-            }
-            lucide.createIcons();
-        }
 
-        // --- 3. MODAL & LOGIC ---
-
-        window.openModal = (dateStr, isCurrentlyUnavailable) => {
-            // Set global pending action
-            pendingAction = { dateStr, isCurrentlyUnavailable };
-
-            // Update Modal Text based on state
-            if (isCurrentlyUnavailable) {
-                modalTitle.innerText = "Mark as Available?";
-                modalTitle.className = "text-lg font-bold text-gray-900 text-center mb-2";
-                modalDesc.innerText = `Do you want to open up ${dateStr} for bookings?`;
-                confirmBtn.innerText = "Yes, Make Available";
-                confirmBtn.className = "py-3 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700 shadow-lg shadow-green-200 transition-colors";
-            } else {
-                modalTitle.innerText = "Mark as Unavailable?";
-                modalTitle.className = "text-lg font-bold text-red-600 text-center mb-2";
-                modalDesc.innerText = `Do you want to block ${dateStr} from your schedule?`;
-                confirmBtn.innerText = "Yes, Block Date";
-                confirmBtn.className = "py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-200 transition-colors";
-            }
-
-            // Show Modal
-            modal.classList.remove('modal-enter');
-            modal.classList.add('modal-active');
-        };
-
-        window.closeModal = () => {
-            modal.classList.remove('modal-active');
-            modal.classList.add('modal-enter');
-            pendingAction = null;
-        };
-
-        // Attach event listener to confirm button
-        confirmBtn.addEventListener('click', async () => {
-            if (!pendingAction) return;
-
-            const { dateStr, isCurrentlyUnavailable } = pendingAction;
-            
-            // Show loading state on button
-            const originalBtnText = confirmBtn.innerText;
-            confirmBtn.innerText = "Processing...";
-            confirmBtn.disabled = true;
-
-            try {
-                if (isCurrentlyUnavailable) {
-                    // REMOVE FROM DB
-                    const q = query(collection(db, "TimeOff"), 
-                        where("doctorId", "==", currentDoctorId),
-                        where("date", "==", dateStr)
-                    );
-                    const snapshot = await getDocs(q);
-                    const deletePromises = snapshot.docs.map(d => deleteDoc(d.ref));
-                    await Promise.all(deletePromises);
-                    showToast("Date marked as Available");
+                    document.getElementById('doctor-name').textContent = name;
                 } else {
-                    // ADD TO DB
-                    await addDoc(collection(db, "TimeOff"), {
-                        doctorId: currentDoctorId,
-                        date: dateStr,
-                        createdAt: new Date() // Helpful for sorting
-                    });
-                    showToast("Date marked as Unavailable");
+                    console.error("No profile found for this ID");
                 }
-                
-                // Success: Close modal and refresh UI
-                closeModal();
-                await refreshCalendar(); // Re-fetch to ensure sync
-
-            } catch (error) {
-                console.error("FIREBASE ERROR:", error);
-                alert("Error updating schedule: " + error.message);
-                closeModal();
-            } finally {
-                confirmBtn.innerText = originalBtnText;
-                confirmBtn.disabled = false;
-            }
-        });
-
-        // --- 4. FIREBASE HELPERS ---
-
-        async function fetchTimeOff(doctorId) {
-            const list = [];
-            try {
-                const q = query(collection(db, "TimeOff"), where("doctorId", "==", doctorId));
-                const querySnapshot = await getDocs(q);
-                querySnapshot.forEach((doc) => {
-                    list.push(doc.data().date);
-                });
             } catch (e) {
-                console.error("Error fetching time off:", e);
-                // If permission denied, this will show in console
+                console.error("Error loading profile:", e);
             }
-            return list;
         }
 
-        function showToast(msg) {
-            const t = document.getElementById('toast');
-            const txt = document.getElementById('toast-msg');
-            txt.textContent = msg;
-            t.style.opacity = '1';
-            setTimeout(() => t.style.opacity = '0', 2500);
-        }
-
+        // 3. Logout Function
+        window.handleLogout = async () => {
+            try {
+                await signOut(auth);
+                window.location.href = "index.html";
+            } catch (error) {
+                console.error("Logout failed", error);
+            }
+        };
     </script>
 </body>
 </html>
