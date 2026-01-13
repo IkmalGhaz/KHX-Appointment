@@ -1,146 +1,91 @@
-import { auth, db, signOut, onAuthStateChanged, collection, query, where, getDocs } from './firebase-config.js';
+// Import updateDoc and doc from your config
+import { auth, db, onAuthStateChanged, collection, query, where, getDocs, doc, updateDoc } from './firebase-config.js';
 
 // DOM Elements
-const userNameEl = document.getElementById('user-name');
-const dateDisplay = document.getElementById('date-display');
-const badgeCount = document.getElementById('badge-count');
-const aptModal = document.getElementById('apt-modal');
-const aptList = document.getElementById('appointments-list');
-let chartInstance = null;
+const profileModal = document.getElementById('profile-modal');
+const profileIconBtn = document.getElementById('logout-btn'); // Top right icon
+const closeProfileBtn = document.getElementById('close-profile');
+const imgUpload = document.getElementById('img-upload');
+const profilePreview = document.getElementById('profile-img-preview');
+const profileForm = document.getElementById('profile-form');
 
-// Initialize Date
-if (dateDisplay) {
-    const options = { weekday: 'long', day: 'numeric', month: 'short' };
-    dateDisplay.innerText = new Date().toLocaleDateString('en-US', options);
-}
+let currentUserDocId = null;
 
-// 1. AUTH GUARD & DATA LOADING
-onAuthStateChanged(auth, async (user) => {
-    if (user) {
-        await loadUserProfile(user.uid); // Pass UID to find document
-        await loadDashboardData(user.uid);
-    } else {
-        window.location.href = "index.html";
-    }
-});
+// Open/Close Modal
+profileIconBtn.onclick = () => profileModal.classList.remove('hidden');
+closeProfileBtn.onclick = () => profileModal.classList.add('hidden');
 
-// 2. LOGOUT LOGIC
-document.getElementById('logout-btn').addEventListener('click', async () => {
-    if(confirm("Logout from KHX Clinic?")) {
-        await signOut(auth);
-        window.location.href = "index.html";
-    }
-});
-
-// 3. LOAD USER PROFILE (The Fix for Random Document IDs)
-async function loadUserProfile(uid) {
+// Load Data into Profile
+async function populateProfile(uid) {
     try {
-        // Query the Users collection where field 'firebaseUid' matches current user
         const q = query(collection(db, "Users"), where("firebaseUid", "==", uid));
-        const querySnapshot = await getDocs(q);
+        const snapshot = await getDocs(q);
 
-        if (!querySnapshot.empty) {
-            // Get the first matching document
-            const userData = querySnapshot.docs[0].data();
-            userNameEl.innerText = userData.fullName || userData.email;
-        } else {
-            userNameEl.innerText = "Valued Patient";
-            console.warn("User document not found for UID:", uid);
+        if (!snapshot.empty) {
+            const userDoc = snapshot.docs[0];
+            currentUserDocId = userDoc.id; // Store Firestore document ID
+            const data = userDoc.data();
+
+            document.getElementById('prof-name').value = data.fullName || "";
+            document.getElementById('prof-phone').value = data.phone || "";
+            document.getElementById('prof-dob').value = data.dateOfBirth || "";
+            document.getElementById('prof-address').value = data.mailingAddress || "";
+
+            if (data.profilePictureUrl) {
+                profilePreview.src = data.profilePictureUrl;
+            }
         }
     } catch (e) {
-        console.error("Profile Load Error:", e);
-        userNameEl.innerText = "Welcome";
+        console.error("Profile fetch error:", e);
     }
 }
 
-// 4. LOAD DASHBOARD DATA (Graph & List)
-async function loadDashboardData(uid) {
+// Handle Image Preview (Local)
+imgUpload.onchange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = () => profilePreview.src = reader.result;
+        reader.readAsDataURL(file);
+    }
+};
+
+// Update Logic
+profileForm.onsubmit = async (e) => {
+    e.preventDefault();
+    const saveBtn = document.getElementById('save-profile');
+    saveBtn.innerText = "Updating...";
+    saveBtn.disabled = true;
+
     try {
-        const q = query(collection(db, "bookings"), where("userId", "==", uid));
-        const snapshot = await getDocs(q);
-        
-        let active = 0, completed = 0, cancelled = 0;
-        let htmlContent = "";
+        const updatedData = {
+            fullName: document.getElementById('prof-name').value,
+            phone: document.getElementById('prof-phone').value,
+            mailingAddress: document.getElementById('prof-address').value,
+            profilePictureUrl: profilePreview.src // Saving as Base64 string
+        };
 
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            const status = data.status || "Upcoming";
-            const isCancelled = data.isCancelled === true;
+        const userRef = doc(db, "Users", currentUserDocId);
+        await updateDoc(userRef, updatedData);
 
-            // Stats Logic
-            if (isCancelled || status === 'Cancelled') cancelled++;
-            else if (status === 'Completed') completed++;
-            else active++;
+        alert("Profile updated successfully!");
+        profileModal.classList.add('hidden');
 
-            // List Item Generation
-            const statusColor = isCancelled ? "bg-red-100 text-red-600" : "bg-green-100 text-green-700";
-            const statusText = isCancelled ? "Cancelled" : status;
-            
-            htmlContent += `
-                <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 flex justify-between items-center">
-                    <div>
-                        <div class="flex items-center gap-2 mb-1">
-                            <span class="text-[10px] font-bold px-2 py-0.5 rounded ${statusColor} uppercase">${statusText}</span>
-                            <span class="text-xs text-gray-400">${data.date}</span>
-                        </div>
-                        <div class="font-bold text-gray-800">${data.serviceName || 'General'}</div>
-                        <div class="text-xs text-gray-500">${data.doctorName || 'Dr. Assigned'}</div>
-                    </div>
-                    <div class="font-bold text-lg text-gray-700">${data.time}</div>
-                </div>
-            `;
-        });
-
-        // Update Badge
-        if (active > 0) {
-            badgeCount.innerText = active;
-            badgeCount.classList.remove('hidden');
-        }
-
-        // Update Modal List
-        aptList.innerHTML = htmlContent || '<div class="text-center py-10 text-gray-400">No appointments found.</div>';
-
-        // Update Chart
-        renderMiniChart(active, completed, cancelled);
-
+        // Refresh dashboard name if changed
+        document.getElementById('user-name').innerText = updatedData.fullName;
     } catch (error) {
-        console.error("Dashboard Data Error:", error);
+        console.error("Update Error:", error);
+        alert("Failed to update profile.");
+    } finally {
+        saveBtn.innerText = "Update Profile";
+        saveBtn.disabled = false;
     }
-}
+};
 
-// 5. CHART RENDERER (Clean Mini Donut)
-function renderMiniChart(active, completed, cancelled) {
-    const ctx = document.getElementById('miniChart');
-    if(!ctx) return;
-
-    if (chartInstance) chartInstance.destroy();
-
-    // If no data, show gray ring
-    const noData = (active + completed + cancelled) === 0;
-
-    chartInstance = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: ['Active', 'Done', 'Cancelled'],
-            datasets: [{
-                data: noData ? [1] : [active, completed, cancelled],
-                backgroundColor: noData ? ['#e5e7eb'] : ['#dc2626', '#16a34a', '#94a3b8'],
-                borderWidth: 0,
-                hoverOffset: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '75%',
-            plugins: { legend: { display: false }, tooltip: { enabled: !noData } }
-        }
-    });
-}
-
-// 6. MODAL HANDLERS
-const viewBtn = document.getElementById('view-apt-btn');
-const closeBtn = document.getElementById('close-modal');
-
-if(viewBtn) viewBtn.onclick = () => { aptModal.classList.remove('hidden'); };
-if(closeBtn) closeBtn.onclick = () => { aptModal.classList.add('hidden'); };
+// Call populate inside your existing Auth observer
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        await populateProfile(user.uid);
+        // ... rest of your existing loadDashboardData
+    }
+});

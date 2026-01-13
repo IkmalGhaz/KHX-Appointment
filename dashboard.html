@@ -54,7 +54,59 @@
 </head>
 
 <body class="flex items-center justify-center min-h-screen">
+<div id="profile-modal" class="absolute inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex flex-col justify-end">
+    <div class="bg-white rounded-t-[2rem] h-[90%] flex flex-col overflow-hidden">
+        <div class="px-6 pt-6 pb-2 flex justify-between items-center border-b border-gray-100">
+            <h2 class="text-xl font-bold text-gray-900">Personal Information</h2>
+            <button id="close-profile" class="p-2 bg-gray-100 rounded-full hover:bg-gray-200">
+                <i data-lucide="x" class="w-5 h-5 text-gray-600"></i>
+            </button>
+        </div>
 
+        <div class="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6">
+            <div class="flex flex-col items-center gap-3">
+                <div class="relative w-24 h-24">
+                    <img id="profile-img-preview" src="assets/js/images/default-user.png"
+                        class="w-full h-full rounded-full object-cover border-4 border-teal-50">
+                    <label for="img-upload"
+                        class="absolute bottom-0 right-0 bg-[#009688] p-2 rounded-full text-white cursor-pointer shadow-lg">
+                        <i data-lucide="camera" class="w-4 h-4"></i>
+                    </label>
+                    <input type="file" id="img-upload" class="hidden" accept="image/*">
+                </div>
+                <p class="text-xs text-gray-400">Tap camera to change photo</p>
+            </div>
+
+            <form id="profile-form" class="space-y-4">
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-400 uppercase">Full Name</label>
+                    <input type="text" id="prof-name"
+                        class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-[#009688]">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-400 uppercase">Phone Number</label>
+                    <input type="tel" id="prof-phone"
+                        class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-[#009688]">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-400 uppercase">Date of Birth</label>
+                    <input type="text" id="prof-dob"
+                        class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm outline-none" readonly>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-gray-400 uppercase">Address</label>
+                    <textarea id="prof-address" rows="3"
+                        class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-[#009688] resize-none"></textarea>
+                </div>
+
+                <button type="submit" id="save-profile"
+                    class="w-full bg-[#009688] text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all mt-4">
+                    Update Profile
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
     <div class="mobile-frame">
 
         <div class="bg-[#009688] pt-12 pb-16 px-6 relative shrink-0 rounded-b-[2.5rem] shadow-lg z-10">
@@ -169,6 +221,21 @@
                         class="tab-btn flex-1 py-3 text-sm font-bold border-b-2 border-transparent text-gray-400">Cancelled</button>
                 </div>
                 <div id="appointments-list" class="flex-1 overflow-y-auto no-scrollbar p-6 bg-gray-50/50"></div>
+
+                <div id="cancel-success-step" class="hidden text-center pt-10 h-full bg-white">
+                    <div
+                        class="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 text-red-600 animate-bounce">
+                        <i data-lucide="check" class="w-12 h-12"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Appointment Cancelled!</h2>
+                    <p class="text-gray-500 mb-8 px-4">Your appointment has been successfully removed.</p>
+                    <div class="px-6">
+                        <button onclick="location.reload()"
+                            class="block w-full bg-red-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-red-200 active:scale-95 transition-all">
+                            Back to Dashboard
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
