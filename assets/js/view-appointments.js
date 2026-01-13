@@ -1,14 +1,14 @@
 import { auth, db, onAuthStateChanged, collection, query, where, getDocs, updateDoc, doc } from './firebase-config.js';
 
 let currentTab = 'Upcoming';
-let appointmentToCancel = null;
+let appointmentToCancel = null; // Store ID globally for the modals
 const aptList = document.getElementById('appointments-list');
 
-// Elemen Modal
+// Modal Elements
 const cancelModal = document.getElementById('cancel-confirm-modal');
 const reasonInput = document.getElementById('cancel-reason-input');
-const confirmBtn = document.getElementById('confirm-cancel-btn'); // Butang di modal sebab
-const finalConfirmBtn = document.getElementById('final-confirm-btn'); // Butang di modal merah
+const confirmBtn = document.getElementById('confirm-cancel-btn'); // Button in the reason modal
+const finalConfirmBtn = document.getElementById('final-confirm-btn'); // Button in the red confirmation modal
 
 onAuthStateChanged(auth, (user) => {
     if (user) {
@@ -16,21 +16,22 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-// --- LOGIK MODAL PEMBATALAN ---
+// --- CANCELLATION MODAL LOGIC ---
 
-// 1. Papar Modal Sebab bila klik butang Cancel di kad appointment
+// 1. Open Reason Modal when 'Cancel' is clicked on an appointment card
 window.cancelBooking = (id) => {
     appointmentToCancel = id;
-    reasonInput.value = '';
+    reasonInput.value = ''; // Clear previous input
     cancelModal.classList.remove('hidden');
 };
 
+// Close Reason Modal
 window.closeCancelModal = () => {
     cancelModal.classList.add('hidden');
     appointmentToCancel = null;
 };
 
-// 2. Bila klik "Confirm" di Modal Sebab -> Papar Modal Merah
+// 2. When 'Confirm' is clicked in Reason Modal -> Show Red Confirmation Pop-up
 if (confirmBtn) {
     confirmBtn.onclick = () => {
         const reason = reasonInput.value.trim();
@@ -38,51 +39,58 @@ if (confirmBtn) {
             alert("Please enter a reason for cancellation.");
             return;
         }
-        // Sembunyikan modal sebab, tunjuk modal merah
+        // Hide reason modal and show the soft transparent red confirmation modal
         cancelModal.classList.add('hidden');
         document.getElementById('booking-confirm-modal').classList.remove('hidden');
     };
 }
 
-// 3. Bila klik "Yes, Confirm Now" di Modal Merah -> Update Firestore
+// 3. When 'Yes, Confirm Now' is clicked in Red Modal -> Wait 3s -> Update Firestore
 if (finalConfirmBtn) {
     finalConfirmBtn.onclick = async () => {
         const reason = reasonInput.value.trim();
 
-        finalConfirmBtn.innerText = "Processing...";
+        // Update button UI to show countdown/loading
+        finalConfirmBtn.innerText = "Confirming in 3s...";
         finalConfirmBtn.disabled = true;
 
-        try {
-            const aptRef = doc(db, "bookings", appointmentToCancel);
-            await updateDoc(aptRef, {
-                status: 'Cancelled',
-                cancellationReason: reason,
-                cancelledAt: new Date()
-            });
+        // 3-second delay before processing
+        setTimeout(async () => {
+            try {
+                finalConfirmBtn.innerText = "Processing...";
 
-            alert("Appointment successfully cancelled.");
+                const aptRef = doc(db, "bookings", appointmentToCancel);
+                await updateDoc(aptRef, {
+                    status: 'Cancelled',
+                    cancellationReason: reason,
+                    cancelledAt: new Date()
+                });
 
-            // Tutup modal merah dan refresh
-            document.getElementById('booking-confirm-modal').classList.add('hidden');
-            location.reload();
-        } catch (error) {
-            console.error("Cancellation Error:", error);
-            alert("Failed to cancel: " + error.message);
-        } finally {
-            finalConfirmBtn.innerText = "Yes, Confirm Now";
-            finalConfirmBtn.disabled = false;
-        }
+                alert("Appointment successfully cancelled.");
+
+                // Hide modal and refresh data
+                document.getElementById('booking-confirm-modal').classList.add('hidden');
+                location.reload();
+            } catch (error) {
+                console.error("Cancellation Error:", error);
+                alert("Failed to cancel: " + error.message);
+
+                // Reset button state on error
+                finalConfirmBtn.innerText = "Yes, Confirm Now";
+                finalConfirmBtn.disabled = false;
+            }
+        }, 3000);
     };
 }
 
-// Helper untuk tutup modal merah
+// Helper to close the red confirmation modal
 window.closeConfirmModal = () => {
     document.getElementById('booking-confirm-modal').classList.add('hidden');
-    // Jika user klik "Back" di modal merah, buka semula modal sebab
+    // If user goes back from red modal, reopen the reason modal
     cancelModal.classList.remove('hidden');
 };
 
-// --- LOGIK PAPARAN SENARAI (Sedia Ada) ---
+// --- APPOINTMENT LIST & TAB LOGIC ---
 
 window.switchTab = (tab) => {
     currentTab = tab;
