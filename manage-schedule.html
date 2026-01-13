@@ -22,23 +22,29 @@
 
     <div class="mobile-frame">
         
-        <div class="bg-gradient-to-r from-[#6200EE] to-[#7C4DFF] pt-12 pb-8 px-6 relative shrink-0 rounded-b-[2.5rem] shadow-lg z-10">
-            <div class="flex justify-between items-center mb-4">
-                <div>
-                    <h1 class="text-2xl font-bold text-white tracking-tight">My Schedule</h1>
-                    <p class="text-purple-100 text-sm font-medium opacity-80" id="doctor-name">Dr. Loading...</p>
+        <div class="bg-gradient-to-r from-[#009688] to-[#00796b] pt-8 pb-6 px-6 relative shrink-0 rounded-b-[2.5rem] shadow-lg z-10">
+            
+            <div class="flex justify-between items-center mb-6">
+                <div onclick="window.history.back()" class="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white cursor-pointer active:scale-95 transition-all hover:bg-white/30">
+                    <i data-lucide="arrow-left" class="w-5 h-5"></i>
                 </div>
-                <div onclick="handleLogout()" class="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white cursor-pointer active:scale-95 transition-all">
+
+                <div onclick="handleLogout()" class="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white cursor-pointer active:scale-95 transition-all hover:bg-white/30">
                     <i data-lucide="log-out" class="w-5 h-5"></i>
                 </div>
             </div>
+
+            <div>
+                <h1 class="text-2xl font-bold text-white tracking-tight">My Schedule</h1>
+                <p class="text-teal-50 text-sm font-medium opacity-90" id="doctor-name">Dr. Loading...</p>
+            </div>
             
-            <div class="flex items-center gap-2 mt-2 bg-white/10 p-2 rounded-lg backdrop-blur-sm border border-white/10">
+            <div class="flex items-center gap-2 mt-4 bg-white/10 p-2 rounded-lg backdrop-blur-sm border border-white/10">
                 <div class="w-2 h-2 rounded-full bg-white"></div>
                 <p class="text-[10px] text-white font-medium">Available</p>
                 <div class="w-2 h-2 rounded-full bg-red-400 ml-2"></div>
                 <p class="text-[10px] text-white font-medium">Unavailable</p>
-                <p class="ml-auto text-[10px] text-purple-100 opacity-75 italic">Tap to change</p>
+                <p class="ml-auto text-[10px] text-teal-50 opacity-80 italic">Tap to change</p>
             </div>
         </div>
 
@@ -47,18 +53,18 @@
 
         <div id="confirm-modal" class="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm modal-enter transition-modal">
             <div class="bg-white w-[85%] rounded-2xl p-6 shadow-2xl transform transition-all">
-                <div class="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mb-4 mx-auto">
-                    <i data-lucide="alert-circle" class="w-6 h-6 text-red-500"></i>
+                <div class="w-12 h-12 bg-teal-50 rounded-full flex items-center justify-center mb-4 mx-auto">
+                    <i data-lucide="calendar-clock" class="w-6 h-6 text-[#009688]"></i>
                 </div>
                 <h3 class="text-lg font-bold text-gray-900 text-center mb-2" id="modal-title">Confirm Action</h3>
                 <p class="text-sm text-gray-500 text-center mb-6" id="modal-desc">
-                    Are you sure you want to mark this date as unavailable?
+                    Are you sure you want to change this date?
                 </p>
                 <div class="grid grid-cols-2 gap-3">
                     <button onclick="closeModal()" class="py-3 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">
                         Cancel
                     </button>
-                    <button id="confirm-btn" class="py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-200 transition-colors">
+                    <button id="confirm-btn" class="py-3 rounded-xl font-bold text-white bg-[#009688] hover:bg-[#00796b] shadow-lg shadow-teal-200 transition-colors">
                         Confirm
                     </button>
                 </div>
@@ -68,7 +74,7 @@
     </div>
 
     <div id="toast" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-xl text-sm font-medium opacity-0 transition-opacity pointer-events-none z-50 whitespace-nowrap flex items-center gap-2">
-        <i data-lucide="check-circle" class="w-4 h-4 text-green-400"></i>
+        <i data-lucide="check-circle" class="w-4 h-4 text-[#009688]"></i>
         <span id="toast-msg">Notification</span>
     </div>
 
@@ -93,7 +99,6 @@
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentDoctorId = user.uid;
-                // Pass the UID to load profile
                 await loadDoctorProfile(user.uid);
                 await refreshCalendar(); 
             } else {
@@ -101,26 +106,17 @@
             }
         });
 
-        // --- FIX: ROBUST NAME LOADING ---
         async function loadDoctorProfile(uid) {
             try {
                 const docRef = await getDoc(doc(db, "Users", uid));
-                
                 if (docRef.exists()) {
                     const data = docRef.data();
-                    console.log("Doctor Data found:", data); // Check your console (F12) to see what fields exist!
-
-                    // 1. Try to find the name in 'doctorName', 'name', or 'fullName'
                     let name = data.doctorName || data.name || data.fullName || "Doctor";
-
-                    // 2. Formatting: Ensure it starts with "Dr."
                     if (!name.toLowerCase().startsWith('dr') && name !== "Doctor") {
                         name = `Dr. ${name}`;
                     }
-
                     doctorNameEl.textContent = name;
                 } else {
-                    console.log("No User document found in DB for ID:", uid);
                     doctorNameEl.textContent = "Dr. Unknown";
                 }
             } catch (e) { 
@@ -137,22 +133,30 @@
         // --- 2. CALENDAR RENDERING ---
         
         async function refreshCalendar() {
-            calendarContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-40"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div><p class="text-xs text-gray-400 mt-2">Syncing Schedule...</p></div>';
+            // Teal Spinner
+            calendarContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-40"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#009688]"></div><p class="text-xs text-gray-400 mt-2">Syncing Schedule...</p></div>';
             
             existingTimeOff = await fetchTimeOff(currentDoctorId);
 
             calendarContainer.innerHTML = ''; 
             const today = new Date();
+            // Create a date object for "Today" with time stripped for accurate comparison
+            const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
             const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
             for (let i = 0; i < 3; i++) {
-                const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
-                const monthName = monthNames[date.getMonth()];
-                const year = date.getFullYear();
+                // Get the first day of the month we are generating
+                const currentMonthDate = new Date(today.getFullYear(), today.getMonth() + i, 1);
+                
+                const monthName = monthNames[currentMonthDate.getMonth()];
+                const year = currentMonthDate.getFullYear();
+                const monthIndex = currentMonthDate.getMonth(); // 0-11
                 
                 const card = document.createElement('div');
                 card.className = "bg-white p-5 rounded-3xl shadow-sm border border-gray-100 mb-6";
-                card.innerHTML = `<h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><i data-lucide="calendar" class="w-4 h-4 text-[#6200EE]"></i> ${monthName} ${year}</h3>`;
+                // Teal Icon in Month Header
+                card.innerHTML = `<h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><i data-lucide="calendar" class="w-4 h-4 text-[#009688]"></i> ${monthName} ${year}</h3>`;
                 
                 const daysRow = document.createElement('div');
                 daysRow.className = "grid grid-cols-7 text-center mb-3 border-b border-gray-100 pb-2";
@@ -164,24 +168,41 @@
                 const grid = document.createElement('div');
                 grid.className = "grid grid-cols-7 gap-y-3 justify-items-center";
 
-                const daysInMonth = new Date(year, date.getMonth() + 1, 0).getDate();
-                const startDay = new Date(year, date.getMonth(), 1).getDay();
+                const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+                const startDay = new Date(year, monthIndex, 1).getDay();
 
+                // Add empty slots for days before the 1st of the month
                 for(let k=0; k<startDay; k++) grid.appendChild(document.createElement('div'));
 
                 for(let d=1; d<=daysInMonth; d++) {
                     const btn = document.createElement('div');
                     const dateStr = `${d} ${monthName} ${year}`;
-                    const isUnavailable = existingTimeOff.includes(dateStr);
-
-                    if (isUnavailable) {
-                        btn.className = "w-9 h-9 flex items-center justify-center rounded-full text-sm font-bold cursor-pointer transition-all bg-red-50 text-red-500 border border-red-200 shadow-sm";
-                    } else {
-                        btn.className = "w-9 h-9 flex items-center justify-center rounded-full text-sm font-bold cursor-pointer transition-all text-gray-700 hover:bg-gray-50 border border-transparent";
-                    }
                     
-                    btn.textContent = d;
-                    btn.onclick = () => openModal(dateStr, isUnavailable);
+                    // Create a specific Date object for this cell to compare with Today
+                    const cellDate = new Date(year, monthIndex, d);
+
+                    // LOGIC CHECK: Is this date in the past?
+                    if (cellDate < todayStart) {
+                        // --- PAST DATE ---
+                        // Grayed out, reduced opacity, no cursor pointer, no onclick
+                        btn.className = "w-9 h-9 flex items-center justify-center rounded-full text-sm font-bold text-gray-300 bg-gray-50 cursor-not-allowed border border-transparent";
+                        btn.textContent = d;
+                        // We do NOT add an onclick handler here
+                    } else {
+                        // --- TODAY OR FUTURE ---
+                        const isUnavailable = existingTimeOff.includes(dateStr);
+
+                        if (isUnavailable) {
+                            // Red for Unavailable (Blocked)
+                            btn.className = "w-9 h-9 flex items-center justify-center rounded-full text-sm font-bold cursor-pointer transition-all bg-red-50 text-red-500 border border-red-200 shadow-sm";
+                        } else {
+                            // Interactive Teal Hover for Available
+                            btn.className = "w-9 h-9 flex items-center justify-center rounded-full text-sm font-bold cursor-pointer transition-all text-gray-700 hover:bg-[#e0f2f1] hover:text-[#009688] hover:border-[#009688] border border-transparent";
+                        }
+                        
+                        btn.textContent = d;
+                        btn.onclick = () => openModal(dateStr, isUnavailable);
+                    }
                     
                     grid.appendChild(btn);
                 }
@@ -190,23 +211,26 @@
             }
             lucide.createIcons();
         }
-
         // --- 3. MODAL & LOGIC ---
 
         window.openModal = (dateStr, isCurrentlyUnavailable) => {
             pendingAction = { dateStr, isCurrentlyUnavailable };
 
             if (isCurrentlyUnavailable) {
+                // Changing from Unavailable -> Available
                 modalTitle.innerText = "Mark as Available?";
                 modalTitle.className = "text-lg font-bold text-gray-900 text-center mb-2";
                 modalDesc.innerText = `Do you want to open up ${dateStr} for bookings?`;
                 confirmBtn.innerText = "Yes, Make Available";
-                confirmBtn.className = "py-3 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700 shadow-lg shadow-green-200 transition-colors";
+                // Green Button
+                confirmBtn.className = "py-3 rounded-xl font-bold text-white bg-[#009688] hover:bg-[#00796b] shadow-lg shadow-teal-200 transition-colors";
             } else {
+                // Changing from Available -> Unavailable
                 modalTitle.innerText = "Mark as Unavailable?";
                 modalTitle.className = "text-lg font-bold text-red-600 text-center mb-2";
                 modalDesc.innerText = `Do you want to block ${dateStr} from your schedule?`;
                 confirmBtn.innerText = "Yes, Block Date";
+                // Red Button
                 confirmBtn.className = "py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-200 transition-colors";
             }
 
