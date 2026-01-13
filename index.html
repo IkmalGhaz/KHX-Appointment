@@ -22,7 +22,7 @@
             </div>
 
             <h1 class="text-3xl font-bold text-white tracking-tight">KHS Clinic</h1>
-            <p class="text-teal-100 text-sm mt-1 font-medium opacity-90">Patient Portal</p>
+            <p class="text-teal-100 text-sm mt-1 font-medium opacity-90">Clinic Portal</p>
         </div>
 
         <div class="flex-1 bg-white -mt-8 rounded-t-[2rem] relative z-10 px-8 pt-10 pb-6 flex flex-col">
@@ -83,7 +83,7 @@
             lucide.createIcons();
         });
 
-        // 2. Role-Based Redirect Function
+        // 2. Updated Role-Based Redirect Function
         async function checkRoleAndRedirect(user) {
             try {
                 const userDoc = await getDoc(doc(db, "Users", user.uid));
@@ -91,11 +91,13 @@
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
                     if (userData.role === "admin") {
-                        window.location.href = "admin-dashboard.html";
+                        window.location.href = "admin-dashboard.html"; // Redirects admins
                     } else if (userData.role === "Doctor") { 
-                        window.location.href = "doctor-dashboard.html";
+                        window.location.href = "doctor-dashboard.html"; // Redirects doctors
+                    } else if (userData.role === "Staff" || userData.role === "staff") {
+                        window.location.href = "staff-dashboard.html"; // New: Redirects staff members to the staff dashboard
                     } else {
-                        window.location.href = "dashboard.html";
+                        window.location.href = "dashboard.html"; // Default for patients
                     }
                 } else {
                     window.location.href = "dashboard.html";
@@ -122,7 +124,7 @@
             submitBtn.disabled = true;
 
             try {
-                await signInWithEmailAndPassword(auth, email, password);
+                await signInWithEmailAndPassword(auth, email, password); // Authenticates with Firebase
             } catch (error) {
                 console.error(error);
                 errorMsg.innerText = "Invalid email or password.";

@@ -90,10 +90,16 @@ function renderList(data) {
 
     // Show Upcoming, Pending, and Pending Approval
     const active = data.filter(apt => 
-        apt.status === 'Upcoming' || 
-        apt.status === 'Pending Approval' || 
-        apt.status === 'Pending' || 
-        apt.paymentStatus === 'Paid' // Also show paid items even if status isn't updated yet
+        // 1. Must NOT be cancelled
+        apt.status !== 'Cancelled' && 
+        
+        // 2. Must meet one of these conditions
+        (
+            apt.status === 'Upcoming' || 
+            apt.status === 'Pending Approval' || 
+            apt.status === 'Pending' || 
+            apt.paymentStatus === 'Paid'
+        )
     );
 
     if (active.length === 0) {

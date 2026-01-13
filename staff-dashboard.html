@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Staff Dashboard - Doctor Availability</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: #ffffff; /* White background as per image */
+            -webkit-tap-highlight-color: transparent; 
+        }
+        
+        .mobile-frame { 
+            width: 100%; 
+            max-width: 375px; 
+            min-height: 812px; 
+            background: #ffffff; 
+            margin: 0 auto; 
+            overflow-x: hidden; 
+            display: flex; 
+            flex-direction: column; 
+        }
+        
+        @media (min-width: 768px) { 
+            .mobile-frame { 
+                border-radius: 40px; 
+                border: 8px solid #1a1a1a; 
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); 
+                height: 812px; 
+                margin-top: 2rem; 
+                overflow-y: auto; 
+            } 
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        
+        /* Card Styles matching the image */
+        .doctor-card {
+            background: #FFFFFF;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); /* Soft shadow */
+            padding: 24px;
+            margin-bottom: 16px;
+            border: 1px solid #f3f4f6;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #000000;
+            margin-bottom: 16px;
+        }
+
+        .date-display {
+            font-size: 14px;
+            font-weight: 600;
+            color: #000000;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen bg-gray-100">
+
+    <div class="mobile-frame">
+        
+        <div class="px-6 pt-10 pb-4">
+            <h1 class="text-3xl font-bold text-gray-900 mb-6">Welcome</h1>
+            
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="section-title mb-0">Doctor Available</h2>
+                <span id="current-date" class="date-display">--</span>
+            </div>
+        </div>
+
+        <div id="available-list" class="px-6 pb-2 space-y-4">
+            <div class="doctor-card animate-pulse">
+                <div class="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+                <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+            </div>
+        </div>
+
+        <div class="px-6 pt-6 pb-4">
+            <h2 class="section-title">Doctor Not Available</h2>
+        </div>
+
+        <div id="unavailable-list" class="px-6 pb-20 space-y-4">
+            </div>
+
+        <div class="fixed bottom-6 right-6 flex gap-3">
+             <a href="admin-dashboard.html" class="bg-gray-900 text-white p-4 rounded-full shadow-xl hover:bg-gray-800 transition-transform active:scale-95">
+                <i data-lucide="layout-grid" class="w-6 h-6"></i>
+            </a>
+        </div>
+
+    </div>
+
+    <script>lucide.createIcons();</script>
+    <script type="module" src="assets/js/staff-dashboard.js"></script>
+</body>
+</html>
