@@ -2,83 +2,231 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KHX Clinic - Admin Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KHX Admin Workspace</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
     <style>
-        body { -webkit-tap-highlight-color: transparent; background: #f0f2f5; }
-        .mobile-frame { width: 100%; max-width: 375px; height: 812px; background: #f8fafc; margin: 0 auto; overflow: hidden; position: relative; display: flex; flex-direction: column; }
-        @media (min-width: 768px) { .mobile-frame { border-radius: 40px; border: 8px solid #1a1a1a; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); height: 812px; margin-top: 2rem; } }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
+        /* --- Design System --- */
+        :root {
+            --primary-grad: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --sidebar-width: 280px;
+        }
+
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: #f0f4f8; 
+            overflow: hidden; /* Prevent body scroll, handle inside main */
+        }
+
+        /* Glassmorphism Classes */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+        }
+
+        .glass-sidebar {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        /* Chart Container */
+        .chart-container {
+            position: relative; 
+            height: 350px; 
+            width: 100%; 
+        }
+
+        /* Custom Scrollbar for Main Content */
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Animations */
+        .fade-in { animation: fadeIn 0.5s ease-out forwards; opacity: 0; transform: translateY(10px); }
+        .delay-100 { animation-delay: 0.1s; }
+        .delay-200 { animation-delay: 0.2s; }
+        .delay-300 { animation-delay: 0.3s; }
+        
+        @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+
+        /* Interactive Elements */
+        .nav-item { transition: all 0.2s; }
+        .nav-item:hover, .nav-item.active { background: #ecfeff; color: #0891b2; border-right: 3px solid #0891b2; }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen">
+<body class="flex h-screen w-full text-slate-800">
 
-    <div class="mobile-frame">
-        <div class="bg-gradient-to-r from-[#00695C] to-[#4DB6AC] pt-12 pb-16 px-6 relative shrink-0 rounded-b-[2.5rem] shadow-lg z-10">
-            <div class="flex justify-between items-center mb-4">
-                <div>
-                    <p class="text-teal-100 text-sm font-medium opacity-80">Hello,</p>
-                    <h1 class="text-2xl font-bold text-white tracking-tight" id="admin-name">Super Admin</h1>
-                </div>
-                <div class="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white" id="logout-btn">
-                    <i data-lucide="user" class="w-8 h-8"></i>
-                </div>
+    <aside class="w-[280px] glass-sidebar h-full flex flex-col shrink-0 z-50">
+        <div class="h-24 flex items-center gap-3 px-8 border-b border-slate-100">
+            <div class="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-cyan-200">
+                <i data-lucide="activity" class="w-6 h-6"></i>
             </div>
-        </div>
-
-        <div class="flex-1 overflow-y-auto no-scrollbar px-6 -mt-8 pb-6 relative z-20 space-y-6">
-            
-            <div class="grid grid-cols-2 gap-4">
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-28">
-                    <div class="w-8 h-8 bg-blue-50 rounded-full flex items-center justify-center text-[#00B0FF]">
-                        <i data-lucide="users" class="w-5 h-5"></i>
-                    </div>
-                    <div>
-                        <p class="text-2xl font-bold text-gray-900" id="total-patients">0</p>
-                        <p class="text-[10px] font-bold text-gray-400 uppercase">Total Patients</p>
-                    </div>
-                </div>
-
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between h-28">
-                    <div class="w-8 h-8 bg-orange-50 rounded-full flex items-center justify-center text-[#FFA726]">
-                        <i data-lucide="clock" class="w-5 h-5"></i>
-                    </div>
-                    <div>
-                        <p class="text-2xl font-bold text-gray-900" id="pending-approvals">0</p>
-                        <p class="text-[10px] font-bold text-gray-400 uppercase">Pending Approvals</p>
-                    </div>
-                </div>
-            </div>
-
             <div>
-                <h2 class="text-lg font-bold text-gray-700 mb-4">Quick Actions</h2>
-                <div class="grid grid-cols-2 gap-4">
-                    <div onclick="location.href='manage-users.html'" 
-                         class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-2 active:scale-95 transition-all text-center cursor-pointer">
-                        <i data-lucide="settings" class="w-8 h-8 text-[#4DB6AC]"></i>
-                        <p class="text-xs font-bold text-gray-600">User Management</p>
-                    </div>
+                <h1 class="font-bold text-xl tracking-tight text-slate-900">KHX Clinic</h1>
+                <p class="text-[10px] font-bold text-cyan-600 uppercase tracking-widest">Admin Suite</p>
+            </div>
+        </div>
 
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-2 active:scale-95 transition-all text-center">
-                        <i data-lucide="calendar" class="w-8 h-8 text-[#7986CB]"></i>
-                        <p class="text-xs font-bold text-gray-600">Doctor Schedule</p>
-                    </div>
+        <nav class="flex-1 py-8 flex flex-col gap-1">
+            <p class="px-8 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Main Menu</p>
+            
+            <a href="#" class="nav-item active flex items-center gap-4 px-8 py-4 text-sm font-semibold text-slate-600">
+                <i data-lucide="layout-grid" class="w-5 h-5"></i> Dashboard
+            </a>
+            <a href="manage-users.html" class="nav-item flex items-center gap-4 px-8 py-4 text-sm font-semibold text-slate-600 hover:text-cyan-700">
+                <i data-lucide="users" class="w-5 h-5"></i> Patient Records
+            </a>
+            <a href="#" onclick="alert('Feature coming soon')" class="nav-item flex items-center gap-4 px-8 py-4 text-sm font-semibold text-slate-600 hover:text-cyan-700">
+                <i data-lucide="calendar-range" class="w-5 h-5"></i> Doctor Schedule
+            </a>
+            <a href="#" onclick="alert('Feature coming soon')" class="nav-item flex items-center gap-4 px-8 py-4 text-sm font-semibold text-slate-600 hover:text-cyan-700">
+                <i data-lucide="wallet" class="w-5 h-5"></i> Finance & Billing
+            </a>
 
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-2 active:scale-95 transition-all text-center">
-                        <i data-lucide="stethoscope" class="w-8 h-8 text-[#4DD0E1]"></i>
-                        <p class="text-xs font-bold text-gray-600">Clinic Services</p>
+            <div class="mt-8 px-8">
+                <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-5 text-white shadow-xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 -mr-4 -mt-4 w-20 h-20 bg-white/10 rounded-full blur-xl"></div>
+                    <p class="text-xs font-medium text-slate-300 mb-1">System Status</p>
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        <span class="font-bold text-sm">Online</span>
                     </div>
+                    <button class="w-full bg-white/10 hover:bg-white/20 py-2 rounded-lg text-xs font-bold transition-colors">
+                        Run Diagnostics
+                    </button>
+                </div>
+            </div>
+        </nav>
 
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-2 active:scale-95 transition-all text-center">
-                        <i data-lucide="bar-chart-3" class="w-8 h-8 text-[#90A4AE]"></i>
-                        <p class="text-xs font-bold text-gray-600">Reports</p>
+        <div class="p-6 border-t border-slate-100">
+            <button id="logout-btn" class="flex items-center gap-3 text-slate-500 hover:text-red-500 transition-colors text-sm font-bold w-full">
+                <i data-lucide="log-out" class="w-5 h-5"></i> Log Out
+            </button>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-full relative overflow-hidden">
+        
+        <header class="h-24 px-10 flex items-center justify-between shrink-0 bg-[#f0f4f8]/80 backdrop-blur-sm z-40 sticky top-0">
+            <div>
+                <h2 class="text-2xl font-bold text-slate-800" id="welcome-msg">Dashboard Overview</h2>
+                <p class="text-sm text-slate-500">Welcome back, <span id="admin-name" class="font-bold text-cyan-600">Admin</span></p>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <div class="bg-white px-4 py-2.5 rounded-xl border border-slate-200 flex items-center gap-3 shadow-sm w-64">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
+                    <input type="text" placeholder="Search appointments..." class="bg-transparent border-none outline-none text-sm w-full font-medium placeholder:text-slate-400">
+                </div>
+                <button class="w-11 h-11 bg-white rounded-xl border border-slate-200 flex items-center justify-center text-slate-500 shadow-sm hover:bg-slate-50">
+                    <i data-lucide="bell" class="w-5 h-5"></i>
+                </button>
+                <div class="w-11 h-11 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold shadow-lg shadow-cyan-200/50">
+                    A
+                </div>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto custom-scroll px-10 pb-10">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 mt-2">
+                
+                <div class="glass-panel p-6 rounded-2xl relative overflow-hidden fade-in group hover:-translate-y-1 transition-transform cursor-default">
+                    <div class="absolute right-0 top-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <i data-lucide="dollar-sign" class="w-16 h-16 text-emerald-600"></i>
+                    </div>
+                    <p class="text-slate-500 text-sm font-medium mb-1">Total Revenue</p>
+                    <h3 class="text-3xl font-bold text-slate-800 mb-2" id="total-revenue">RM 0</h3>
+                    <div class="flex items-center gap-2 text-xs font-bold text-emerald-600 bg-emerald-50 w-fit px-2 py-1 rounded-md">
+                        <i data-lucide="trending-up" class="w-3 h-3"></i> +12.5%
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 rounded-2xl relative overflow-hidden fade-in delay-100 group hover:-translate-y-1 transition-transform cursor-default">
+                    <div class="absolute right-0 top-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <i data-lucide="users" class="w-16 h-16 text-blue-600"></i>
+                    </div>
+                    <p class="text-slate-500 text-sm font-medium mb-1">Total Patients</p>
+                    <h3 class="text-3xl font-bold text-slate-800 mb-2" id="total-patients">0</h3>
+                    <div class="flex items-center gap-2 text-xs font-bold text-blue-600 bg-blue-50 w-fit px-2 py-1 rounded-md">
+                        Active Accounts
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 rounded-2xl relative overflow-hidden fade-in delay-200 group hover:-translate-y-1 transition-transform cursor-default">
+                    <div class="absolute right-0 top-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <i data-lucide="calendar" class="w-16 h-16 text-purple-600"></i>
+                    </div>
+                    <p class="text-slate-500 text-sm font-medium mb-1">Total Bookings</p>
+                    <h3 class="text-3xl font-bold text-slate-800 mb-2" id="total-bookings">0</h3>
+                    <div class="flex items-center gap-2 text-xs font-bold text-purple-600 bg-purple-50 w-fit px-2 py-1 rounded-md">
+                        All Time
+                    </div>
+                </div>
+
+                <div class="bg-slate-900 p-6 rounded-2xl relative overflow-hidden text-white fade-in delay-300 shadow-xl shadow-slate-900/20 group hover:-translate-y-1 transition-transform cursor-pointer" onclick="location.href='manage-users.html'">
+                    <div class="absolute -right-6 -top-6 w-32 h-32 bg-cyan-500 rounded-full blur-3xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
+                    <div class="relative z-10">
+                        <p class="text-slate-400 text-sm font-medium mb-1">Pending Approvals</p>
+                        <h3 class="text-3xl font-bold mb-2" id="pending-count">0</h3>
+                        <div class="flex items-center gap-2 text-xs font-bold text-amber-400 bg-white/10 w-fit px-2 py-1 rounded-md">
+                            Needs Attention
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <div class="lg:col-span-2 glass-panel p-8 rounded-3xl fade-in delay-200">
+                    <div class="flex justify-between items-center mb-8">
+                        <div>
+                            <h3 class="font-bold text-lg text-slate-800">Appointment Analytics</h3>
+                            <p class="text-sm text-slate-500">Overview of clinic performance status</p>
+                        </div>
+                        <div class="flex bg-slate-100 p-1 rounded-lg">
+                            <button class="px-4 py-1.5 bg-white shadow-sm rounded-md text-xs font-bold text-slate-800">Monthly</button>
+                            <button class="px-4 py-1.5 text-xs font-bold text-slate-500 hover:text-slate-800">Weekly</button>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-8 rounded-3xl fade-in delay-300 flex flex-col h-full">
+                    <h3 class="font-bold text-lg text-slate-800 mb-6">Recent Activity</h3>
+                    
+                    <div id="activity-list" class="flex-1 space-y-4 overflow-y-auto custom-scroll pr-2 max-h-[300px] lg:max-h-none">
+                        <div class="animate-pulse flex gap-4">
+                            <div class="w-12 h-12 bg-slate-200 rounded-full shrink-0"></div>
+                            <div class="flex-1 space-y-2 py-2">
+                                <div class="h-2 bg-slate-200 rounded w-3/4"></div>
+                                <div class="h-2 bg-slate-200 rounded w-1/2"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="w-full mt-6 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">
+                        View Full History
+                    </button>
+                </div>
+
+            </div>
         </div>
-    </div>
+    </main>
 
     <script>lucide.createIcons();</script>
     <script type="module" src="assets/js/admin-dashboard.js"></script>

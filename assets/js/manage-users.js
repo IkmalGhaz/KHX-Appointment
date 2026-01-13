@@ -1,171 +1,196 @@
-import { db, collection, getDocs, doc, updateDoc, deleteDoc } from './firebase-config.js';
+import { db, collection, getDocs, doc, updateDoc, deleteDoc, addDoc } from './firebase-config.js';
 
-let allUsers = [];
-let currentFilter = 'All';
-let selectedUserId = null;
+// --- State Management ---
+let allPatients = [];
+let filteredPatients = [];
+let sortConfig = { key: 'fullName', direction: 'asc' };
 
-// DOM Elements
+// --- DOM Elements ---
 const tableBody = document.getElementById('user-table-body');
-const searchInput = document.getElementById('user-search');
-const loadingState = document.getElementById('loading-state');
-const actionModal = document.getElementById('action-modal');
+const searchInput = document.getElementById('table-search');
+const sidebar = document.getElementById('detail-sidebar');
+const overlay = document.getElementById('sidebar-overlay');
+const showingInfo = document.getElementById('showing-info');
 
-// 1. Load Users Function
+// --- 1. Load Data ---
 async function loadUsers() {
+    tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-12"><div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-cyan-100 border-t-cyan-500"></div><p class="text-xs text-slate-400 mt-2">Loading patients...</p></td></tr>`;
+    
     try {
         const querySnapshot = await getDocs(collection(db, "Users"));
-        allUsers = [];
+        allPatients = [];
+        
         querySnapshot.forEach((docSnap) => {
-            // Combine doc ID with data
-            allUsers.push({ id: docSnap.id, ...docSnap.data() });
+            const data = docSnap.data();
+            const role = (data.role || "").toLowerCase();
+            
+            // STRICT FILTER: Only Patients (or users with no role defined)
+            if (role === 'patient' || role === '' || !data.role) {
+                allPatients.push({ id: docSnap.id, ...data });
+            }
         });
         
-        renderTable();
-        loadingState.classList.add('hidden'); // Hide spinner
+        applyFilters(); 
     } catch (error) {
-        console.error("Error loading users:", error);
-        loadingState.innerHTML = `<p class="text-red-500">Error loading data. Please try again.</p>`;
+        console.error("Error:", error);
+        tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-red-500">Failed to load data.</td></tr>`;
     }
 }
 
-// 2. Render Table Function
-function renderTable() {
-    const searchTerm = searchInput.value.toLowerCase();
-    
-    // Filter Logic
-    const filtered = allUsers.filter(user => {
+// --- 2. Filtering Logic ---
+function applyFilters() {
+    const term = searchInput.value.toLowerCase();
+
+    // Search
+    filteredPatients = allPatients.filter(user => {
         const name = (user.fullName || "").toLowerCase();
         const email = (user.email || "").toLowerCase();
-        const role = (user.role || "").toLowerCase();
-        const status = (user.status || "").toLowerCase();
-
-        const matchesSearch = name.includes(searchTerm) || email.includes(searchTerm);
-        
-        let matchesFilter = true;
-        if (currentFilter === 'Pending') matchesFilter = status === 'pending';
-        if (currentFilter === 'Staff') matchesFilter = role === 'staff';
-        if (currentFilter === 'Doctor') matchesFilter = role === 'doctor';
-            
-        return matchesSearch && matchesFilter;
+        return name.includes(term) || email.includes(term);
     });
 
-    // Generate HTML
-    if (filtered.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-400">No users found.</td></tr>`;
-    } else {
-        tableBody.innerHTML = filtered.map(user => `
-            <tr class="hover:bg-gray-50/50 transition-colors border-b border-gray-50 last:border-0">
+    // Sort
+    filteredPatients.sort((a, b) => {
+        const valA = (a[sortConfig.key] || "").toLowerCase();
+        const valB = (b[sortConfig.key] || "").toLowerCase();
+        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    renderTable();
+}
+
+// --- 3. Render Table ---
+function renderTable() {
+    if (filteredPatients.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-12 text-slate-400">No patients found.</td></tr>`;
+        showingInfo.innerText = "Showing 0 patients";
+        return;
+    }
+
+    tableBody.innerHTML = filteredPatients.map(user => {
+        const status = (user.status || "Pending");
+        const statusClass = status.toLowerCase() === 'active' ? 'status-active' : 'status-pending';
+        const initials = getInitials(user.fullName);
+
+        return `
+            <tr class="user-row border-b border-slate-50 last:border-0 group">
                 <td class="px-6 py-4">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 overflow-hidden shrink-0">
+                    <input type="checkbox" class="custom-checkbox row-checkbox" value="${user.id}">
+                </td>
+                <td class="px-6 py-4">
+                    <div class="flex items-center gap-3 cursor-pointer" onclick="openDetailSidebar('${user.id}')">
+                        <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 overflow-hidden shrink-0 border border-slate-200">
                             ${user.profilePictureUrl 
                                 ? `<img src="${user.profilePictureUrl}" class="w-full h-full object-cover">` 
-                                : `<i data-lucide="user" class="w-5 h-5"></i>`}
+                                : `<span class="font-bold text-xs">${initials}</span>`}
                         </div>
                         <div>
-                            <div class="font-bold text-gray-800 text-sm">${user.fullName || 'Unknown User'}</div>
-                            <div class="text-xs text-gray-400">${user.email || 'No Email'}</div>
+                            <div class="font-bold text-slate-800 text-sm group-hover:text-cyan-600 transition-colors">${user.fullName || 'Unknown'}</div>
+                            <div class="text-xs text-slate-400">${user.email || 'No Email'}</div>
                         </div>
                     </div>
                 </td>
-                <td class="px-6 py-4">
-                    <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider badge-role">
-                        ${user.role || 'Patient'}
-                    </span>
+                <td class="px-6 py-4 text-sm text-slate-500">
+                    ${user.phone || '<span class="text-slate-300 italic">No Phone</span>'}
                 </td>
                 <td class="px-6 py-4">
-                    <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${ (user.status || "").toLowerCase() === 'active' ? 'badge-active' : 'badge-pending'}">
-                        ${user.status || 'Pending'}
+                    <span class="px-2.5 py-1 rounded-md text-[11px] font-bold ${statusClass} inline-flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-current ${status.toLowerCase() === 'active' ? 'animate-pulse' : ''}"></span>
+                        ${status}
                     </span>
                 </td>
                 <td class="px-6 py-4 text-right">
-                    <button onclick="openActions('${user.id}', '${user.fullName}')" class="p-2 hover:bg-gray-200 rounded-lg text-gray-400 transition-colors">
-                        <i data-lucide="more-horizontal" class="w-5 h-5"></i>
-                    </button>
+                    <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onclick="openDetailSidebar('${user.id}')" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors" title="View Profile">
+                            <i data-lucide="eye" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="deleteUser('${user.id}')" class="p-2 hover:bg-red-50 rounded-lg text-red-500 transition-colors" title="Delete Account">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
                 </td>
             </tr>
-        `).join('');
+        `;
+    }).join('');
+
+    showingInfo.innerText = `Showing ${filteredPatients.length} patients`;
+    if(window.lucide) window.lucide.createIcons();
+}
+
+// --- 4. Sidebar Detail Logic ---
+window.openDetailSidebar = (id) => {
+    const user = allPatients.find(u => u.id === id);
+    if (!user) return;
+
+    // Populate Sidebar
+    document.getElementById('detail-name').innerText = user.fullName || "Unknown";
+    document.getElementById('detail-status').innerText = user.status || "Pending";
+    document.getElementById('detail-email').innerText = user.email || "--";
+    document.getElementById('detail-phone').innerText = user.phone || "--";
+    document.getElementById('detail-address').innerText = user.mailingAddress || "No address provided";
+    
+    // Convert Firestore Timestamp to Date if available
+    if(user.createdAt && user.createdAt.seconds) {
+        document.getElementById('detail-joined').innerText = new Date(user.createdAt.seconds * 1000).toLocaleDateString();
+    } else {
+        document.getElementById('detail-joined').innerText = "--";
     }
     
-    // Refresh Icons
-    if (window.lucide) window.lucide.createIcons();
-}
+    const imgEl = document.getElementById('detail-img');
+    imgEl.src = user.profilePictureUrl || "assets/js/images/default-user.png";
 
-// 3. Modal & Action Handlers
-// We attach these to 'window' so HTML onclick="" works with modules
-window.openActions = (id, name) => {
-    selectedUserId = id;
-    const nameSpan = document.getElementById('modal-user-name');
-    if(nameSpan) nameSpan.innerText = name;
-    actionModal.classList.remove('hidden');
+    // Show
+    sidebar.classList.add('open');
+    overlay.classList.remove('hidden');
+    setTimeout(() => overlay.classList.remove('opacity-0'), 10);
 };
 
-const closeModalBtn = document.getElementById('close-modal');
-if(closeModalBtn) {
-    closeModalBtn.onclick = () => actionModal.classList.add('hidden');
+window.closeDetailSidebar = () => {
+    sidebar.classList.remove('open');
+    overlay.classList.add('opacity-0');
+    setTimeout(() => overlay.classList.add('hidden'), 300);
+};
+
+// --- 5. Helper Functions ---
+function getInitials(name) {
+    if(!name) return "??";
+    return name.split(" ").map(n => n[0]).join("").substring(0,2).toUpperCase();
 }
 
-// 4. Handle Action Buttons (Verify, Promote, Delete)
-document.querySelectorAll('.action-btn').forEach(btn => {
-    btn.onclick = async () => {
-        const action = btn.dataset.action;
-        if (!selectedUserId) return;
-        
-        const userRef = doc(db, "Users", selectedUserId);
-        const originalBtnContent = btn.innerHTML;
-        btn.innerHTML = `<span class="animate-spin mr-2">⏳</span> Processing...`;
+window.sortTable = (key) => {
+    if (sortConfig.key === key) {
+        sortConfig.direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortConfig.key = key;
+        sortConfig.direction = 'asc';
+    }
+    applyFilters();
+};
 
+window.openUserModal = () => {
+    document.getElementById('user-modal').classList.remove('hidden');
+};
+
+window.closeUserModal = () => {
+    document.getElementById('user-modal').classList.add('hidden');
+};
+
+window.deleteUser = async (id) => {
+    if(confirm("Are you sure you want to remove this patient? This action is irreversible.")) {
         try {
-            if (action === 'Verify') {
-                await updateDoc(userRef, { status: 'Active' });
-            } else if (action === 'Staff') {
-                await updateDoc(userRef, { role: 'Staff' });
-            } else if (action === 'Doctor') {
-                await updateDoc(userRef, { role: 'Doctor' });
-            } else if (action === 'Delete') {
-                if (confirm("Permanently delete this user? This cannot be undone.")) {
-                    await deleteDoc(userRef);
-                } else {
-                    btn.innerHTML = originalBtnContent;
-                    return; // Cancelled
-                }
-            }
-            
-            // Success: Close modal and reload table
-            actionModal.classList.add('hidden');
-            await loadUsers(); 
-
-        } catch (err) {
-            console.error(err);
-            alert("Action failed: " + err.message);
-        } finally {
-            btn.innerHTML = originalBtnContent;
+            await deleteDoc(doc(db, "Users", id));
+            alert("Patient removed successfully.");
+            loadUsers(); // Refresh
+        } catch(e) {
+            console.error(e);
+            alert("Error deleting user.");
         }
-    };
-});
-
-// 5. Filter Chip Logic
-document.querySelectorAll('.filter-chip').forEach(chip => {
-    chip.onclick = () => {
-        // Reset all chips
-        document.querySelectorAll('.filter-chip').forEach(c => {
-            c.classList.remove('active', 'bg-blue-50', 'text-blue-600', 'border-blue-100');
-            c.classList.add('bg-gray-50', 'text-gray-500', 'border-gray-100');
-        });
-        
-        // Activate clicked chip
-        chip.classList.remove('bg-gray-50', 'text-gray-500', 'border-gray-100');
-        chip.classList.add('active', 'bg-blue-50', 'text-blue-600', 'border-blue-100');
-        
-        currentFilter = chip.dataset.filter;
-        renderTable();
-    };
-});
-
-// 6. Search Listener
-if(searchInput) {
-    searchInput.oninput = renderTable;
+    }
 }
 
-// Initial Call
+// --- Event Listeners ---
+searchInput.addEventListener('input', applyFilters);
+
+// Initial Load
 loadUsers();
