@@ -1,21 +1,43 @@
-// Import updateDoc and doc from your config
-import { auth, db, onAuthStateChanged, collection, query, where, getDocs, doc, updateDoc } from './firebase-config.js';
+import { auth, db, onAuthStateChanged, collection, query, where, getDocs, doc, updateDoc, signOut } from './firebase-config.js';
 
-// DOM Elements
-const profileModal = document.getElementById('profile-modal');
-const profileIconBtn = document.getElementById('logout-btn'); // Top right icon
-const closeProfileBtn = document.getElementById('close-profile');
-const imgUpload = document.getElementById('img-upload');
-const profilePreview = document.getElementById('profile-img-preview');
-const profileForm = document.getElementById('profile-form');
+// Modal Elements
+const profileViewModal = document.getElementById('profile-view-modal');
+const profileEditModal = document.getElementById('profile-edit-modal');
+const profileIconBtn = document.getElementById('logout-btn');
+
+// View Mode Elements
+const viewFullName = document.getElementById('view-full-name');
+const viewPhone = document.getElementById('view-phone');
+const viewEmail = document.getElementById('view-email');
+const viewDob = document.getElementById('view-dob');
+const viewAddress = document.getElementById('view-address');
+const viewImg = document.getElementById('view-prof-img');
+
+// Edit Mode Elements
+const editForm = document.getElementById('edit-profile-form');
+const editNameInput = document.getElementById('edit-prof-name');
+const editPhoneInput = document.getElementById('edit-prof-phone');
+const editAddressInput = document.getElementById('edit-prof-address');
+const editImgPreview = document.getElementById('edit-prof-img-preview');
+const imgUploadInput = document.getElementById('img-upload');
 
 let currentUserDocId = null;
 
-// Open/Close Modal
-profileIconBtn.onclick = () => profileModal.classList.remove('hidden');
-closeProfileBtn.onclick = () => profileModal.classList.add('hidden');
+// --- Modal Handlers ---
+profileIconBtn.onclick = () => profileViewModal.classList.remove('hidden');
+window.closeViewProfile = () => profileViewModal.classList.add('hidden');
 
-// Load Data into Profile
+document.getElementById('open-edit-btn').onclick = () => {
+    profileViewModal.classList.add('hidden');
+    profileEditModal.classList.remove('hidden');
+};
+
+window.closeEditProfile = () => {
+    profileEditModal.classList.add('hidden');
+    profileViewModal.classList.remove('hidden');
+};
+
+// --- Data Population ---
 async function populateProfile(uid) {
     try {
         const q = query(collection(db, "Users"), where("firebaseUid", "==", uid));
@@ -23,69 +45,81 @@ async function populateProfile(uid) {
 
         if (!snapshot.empty) {
             const userDoc = snapshot.docs[0];
-            currentUserDocId = userDoc.id; // Store Firestore document ID
+            currentUserDocId = userDoc.id;
             const data = userDoc.data();
 
-            document.getElementById('prof-name').value = data.fullName || "";
-            document.getElementById('prof-phone').value = data.phone || "";
-            document.getElementById('prof-dob').value = data.dateOfBirth || "";
-            document.getElementById('prof-address').value = data.mailingAddress || "";
+            // Populate View Mode
+            document.getElementById('view-full-name-header').innerText = data.fullName || "Jane Smith";
+            viewFullName.innerText = data.fullName || "--";
+            viewPhone.innerText = data.phone || "--";
+            viewEmail.innerText = data.email || "--";
+            viewDob.innerText = data.dateOfBirth || "--";
+            viewAddress.innerText = data.mailingAddress || "--";
+            if (data.profilePictureUrl) viewImg.src = data.profilePictureUrl;
 
-            if (data.profilePictureUrl) {
-                profilePreview.src = data.profilePictureUrl;
-            }
+            // Populate Edit Form
+            editNameInput.value = data.fullName || "";
+            editPhoneInput.value = data.phone || "";
+            editAddressInput.value = data.mailingAddress || "";
+            if (data.profilePictureUrl) editImgPreview.src = data.profilePictureUrl;
+
+            // Update Main Dashboard Header
+            document.getElementById('user-name').innerText = data.fullName || "Valued Patient";
         }
     } catch (e) {
-        console.error("Profile fetch error:", e);
+        console.error("Profile Load Error:", e);
     }
 }
 
-// Handle Image Preview (Local)
-imgUpload.onchange = (e) => {
+// --- Edit/Update Logic ---
+imgUploadInput.onchange = (e) => {
     const file = e.target.files[0];
     if (file) {
         const reader = new FileReader();
-        reader.onload = () => profilePreview.src = reader.result;
+        reader.onload = () => editImgPreview.src = reader.result;
         reader.readAsDataURL(file);
     }
 };
 
-// Update Logic
-profileForm.onsubmit = async (e) => {
+editForm.onsubmit = async (e) => {
     e.preventDefault();
-    const saveBtn = document.getElementById('save-profile');
+    const saveBtn = document.getElementById('save-edit-btn');
     saveBtn.innerText = "Updating...";
     saveBtn.disabled = true;
 
     try {
         const updatedData = {
-            fullName: document.getElementById('prof-name').value,
-            phone: document.getElementById('prof-phone').value,
-            mailingAddress: document.getElementById('prof-address').value,
-            profilePictureUrl: profilePreview.src // Saving as Base64 string
+            fullName: editNameInput.value,
+            phone: editPhoneInput.value,
+            mailingAddress: editAddressInput.value,
+            profilePictureUrl: editImgPreview.src // Saving as Base64
         };
 
         const userRef = doc(db, "Users", currentUserDocId);
         await updateDoc(userRef, updatedData);
 
         alert("Profile updated successfully!");
-        profileModal.classList.add('hidden');
-
-        // Refresh dashboard name if changed
-        document.getElementById('user-name').innerText = updatedData.fullName;
+        await populateProfile(auth.currentUser.uid); // Refresh data
+        closeEditProfile();
     } catch (error) {
         console.error("Update Error:", error);
         alert("Failed to update profile.");
     } finally {
-        saveBtn.innerText = "Update Profile";
+        saveBtn.innerText = "Save Changes";
         saveBtn.disabled = false;
     }
 };
 
-// Call populate inside your existing Auth observer
+document.getElementById('profile-logout-btn').onclick = async () => {
+    if (confirm("Logout from KHX Clinic?")) {
+        await signOut(auth);
+        window.location.href = "index.html";
+    }
+};
+
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         await populateProfile(user.uid);
-        // ... rest of your existing loadDashboardData
+        if (window.lucide) window.lucide.createIcons();
     }
 });
