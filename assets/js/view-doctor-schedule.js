@@ -6,61 +6,98 @@ const actionSheet = document.getElementById('action-sheet');
 let allAppointments = [];
 let selectedAptId = null;
 
-// Initialization
+// --- 1. Initialization ---
 onAuthStateChanged(auth, (user) => {
     if (user) {
-        loadAppointments(user.uid);
+        console.log("LOGGED IN AS DOCTOR:", user.uid);
+        // We pass the trimmed UID to ensure no spaces break the match
+        loadAppointments(user.uid.trim());
     } else {
         window.location.href = "index.html";
     }
 });
 
+// --- 2. Data Fetching ---
 async function loadAppointments(doctorId) {
     try {
-        const q = query(collection(db, "bookings"), where("doctorId", "==", doctorId));
-        const snapshot = await getDocs(q);
+        console.log(`Searching for bookings where doctorId == "${doctorId}"`);
 
-        if (snapshot.empty) {
-            renderEmptyState();
-            return;
-        }
-
-        const promises = snapshot.docs.map(async (bookingDoc) => {
-            const data = bookingDoc.data();
-            let patientName = "Unknown Patient";
+        // 1. First, try to fetch ANY booking to test connection
+        // This helps us know if it's a Permission error or a Data Match error
+        try {
+            const testQ = query(collection(db, "bookings"), where("doctorId", "==", doctorId));
+            const snapshot = await getDocs(testQ);
             
-            if (data.patientId) {
-                try {
-                    const patientSnap = await getDoc(doc(db, "Users", data.patientId));
-                    if (patientSnap.exists()) {
-                        patientName = patientSnap.data().fullName || "Unknown";
-                    }
-                } catch (e) { console.error(e); }
+            console.log(`Found ${snapshot.size} appointments for this doctor.`);
+
+            if (snapshot.empty) {
+                renderEmptyState(`ID: ${doctorId}`);
+                return;
             }
 
-            return {
-                id: bookingDoc.id,
-                ...data,
-                patientName
-            };
-        });
+            // 2. Process Data
+            const promises = snapshot.docs.map(async (bookingDoc) => {
+                const data = bookingDoc.data();
+                let patientName = "Unknown Patient";
+                
+                if (data.patientId) {
+                    try {
+                        const patientSnap = await getDoc(doc(db, "Users", data.patientId));
+                        if (patientSnap.exists()) {
+                            patientName = patientSnap.data().fullName || "Unknown";
+                        }
+                    } catch (e) { console.warn("Patient fetch error", e); }
+                }
 
-        allAppointments = await Promise.all(promises);
-        allAppointments.sort((a, b) => new Date(a.date) - new Date(b.date));
-        renderList(allAppointments);
+                return {
+                    id: bookingDoc.id,
+                    ...data,
+                    patientName
+                };
+            });
+
+            allAppointments = await Promise.all(promises);
+            
+            // Sort by Date
+            allAppointments.sort((a, b) => new Date(a.date) - new Date(b.date));
+            renderList(allAppointments);
+
+        } catch (queryError) {
+            console.error("QUERY ERROR:", queryError);
+            throw queryError; // Pass to main catch
+        }
 
     } catch (error) {
-        console.error("Fetch Error:", error);
-        aptList.innerHTML = `<p class="text-center text-gray-400 mt-10">Unable to load schedule.</p>`;
+        console.error("CRITICAL ERROR:", error);
+        
+        let errorMsg = "Unable to load schedule.";
+        if (error.code === 'permission-denied') {
+            errorMsg = "Database Permission Denied. Please update Firestore Rules.";
+        }
+        
+        aptList.innerHTML = `
+            <div class="text-center pt-10 px-6">
+                <p class="text-red-500 font-bold mb-2">Error Loading Data</p>
+                <p class="text-xs text-gray-400 break-words">${errorMsg}</p>
+                <p class="text-[10px] text-gray-300 mt-2 font-mono">Open Console (F12) for details</p>
+            </div>`;
     }
 }
 
+// --- 3. Rendering ---
 function renderList(data) {
     aptList.innerHTML = '';
-    const active = data.filter(apt => apt.status === 'Upcoming' || apt.status === 'Pending Approval' || apt.status === 'Pending');
+
+    // Show Upcoming, Pending, and Pending Approval
+    const active = data.filter(apt => 
+        apt.status === 'Upcoming' || 
+        apt.status === 'Pending Approval' || 
+        apt.status === 'Pending' || 
+        apt.paymentStatus === 'Paid' // Also show paid items even if status isn't updated yet
+    );
 
     if (active.length === 0) {
-        renderEmptyState();
+        renderEmptyState("No upcoming appointments");
         return;
     }
 
@@ -68,7 +105,7 @@ function renderList(data) {
         const dateStr = formatCustomDate(apt.date, apt.time);
 
         const card = document.createElement('div');
-        card.className = "bg-white p-5 rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] fade-in relative";
+        card.className = "bg-white p-5 rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] fade-in relative mb-3";
         
         card.innerHTML = `
             <div class="flex justify-between items-start mb-2">
@@ -88,6 +125,11 @@ function renderList(data) {
                     <i data-lucide="heart" class="w-4 h-4 shrink-0"></i>
                     <span class="text-xs font-medium">${apt.serviceName || 'Consultation'}</span>
                 </div>
+
+                <div class="flex items-center gap-2 mt-2">
+                     <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 uppercase">${apt.status}</span>
+                     ${apt.paymentStatus === 'Paid' ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-green-50 text-green-600 border border-green-100 uppercase">PAID</span>' : ''}
+                </div>
             </div>
         `;
         
@@ -97,38 +139,52 @@ function renderList(data) {
     if(window.lucide) window.lucide.createIcons();
 }
 
+// --- 4. Helpers & Search ---
+function renderEmptyState(debugInfo = "") {
+    aptList.innerHTML = `
+        <div class="flex flex-col items-center justify-center pt-20 opacity-40">
+            <i data-lucide="calendar-x" class="w-16 h-16 text-gray-300 mb-4"></i>
+            <p class="text-sm font-bold text-gray-500">No appointments found</p>
+            <p class="text-[10px] text-gray-400 mt-2 font-mono">${debugInfo}</p>
+        </div>
+    `;
+    if(window.lucide) window.lucide.createIcons();
+}
+
 searchInput.addEventListener('input', (e) => {
     const term = e.target.value.toLowerCase();
     const filtered = allAppointments.filter(apt => 
-        apt.patientName.toLowerCase().includes(term) || 
-        apt.serviceName.toLowerCase().includes(term)
+        (apt.patientName && apt.patientName.toLowerCase().includes(term)) || 
+        (apt.serviceName && apt.serviceName.toLowerCase().includes(term))
     );
     renderList(filtered);
 });
 
 function formatCustomDate(dateString, timeString) {
     if (!dateString || !timeString) return "Date pending";
+    try {
+        const dateParts = dateString.split(' '); 
+        if(dateParts.length < 3) return dateString;
+        
+        const day = dateParts[0];
+        const month = dateParts[1];
+        const year = dateParts[2];
+        const dateObj = new Date(`${month} ${day}, ${year}`);
+        const weekday = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+        
+        const [hrs, mins] = timeString.split(':');
+        let h = parseInt(hrs);
+        const ampm = h >= 12 ? 'pm' : 'am';
+        const h12 = h % 12 || 12;
+        let endH = h + 1;
+        const endAmpm = endH >= 12 ? 'pm' : 'am';
+        const endH12 = endH % 12 || 12;
 
-    const dateParts = dateString.split(' '); 
-    const day = dateParts[0];
-    const month = dateParts[1];
-    const year = dateParts[2];
-    
-    const dateObj = new Date(`${month} ${day}, ${year}`);
-    const weekday = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
-    
-    const [hrs, mins] = timeString.split(':');
-    let h = parseInt(hrs);
-    const ampm = h >= 12 ? 'pm' : 'am';
-    const h12 = h % 12 || 12;
-    
-    let endH = h + 1;
-    const endAmpm = endH >= 12 ? 'pm' : 'am';
-    const endH12 = endH % 12 || 12;
-
-    return `${h12}:${mins}${ampm} - ${endH12}:${mins}${endAmpm} (${day}th, ${weekday})`;
+        return `${h12}:${mins}${ampm} - ${endH12}:${mins}${endAmpm} (${day}th, ${weekday})`;
+    } catch(e) { return `${dateString} ${timeString}`; }
 }
 
+// --- 5. Action Sheet Logic ---
 window.openMenu = (id) => {
     selectedAptId = id;
     actionSheet.classList.remove('hidden');
@@ -151,19 +207,8 @@ async function updateStatus(status) {
         closeActionSheet();
         renderList(allAppointments); 
     } catch(e) {
-        console.error(e);
-        alert("Action failed.");
+        alert("Update failed: " + e.message);
     }
-}
-
-function renderEmptyState() {
-    aptList.innerHTML = `
-        <div class="flex flex-col items-center justify-center pt-20 opacity-40">
-            <i data-lucide="calendar" class="w-16 h-16 text-gray-300 mb-4"></i>
-            <p class="text-sm font-bold text-gray-500">No appointments found</p>
-        </div>
-    `;
-    if(window.lucide) window.lucide.createIcons();
 }
 
 window.openMenu = window.openMenu;
