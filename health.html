@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Health Stats - KHS Clinic</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+            background: #f0f2f5;
+        }
+
+        .mobile-frame {
+            width: 100%;
+            max-width: 375px;
+            height: 812px;
+            background: #f8fafc;
+            margin: 0 auto;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @media (min-width: 768px) {
+            .mobile-frame {
+                border-radius: 40px;
+                border: 8px solid #1a1a1a;
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+                height: 812px;
+                margin-top: 2rem;
+            }
+        }
+    </style>
+</head>
+
+<body class="flex items-center justify-center min-h-screen">
+    <div class="mobile-frame p-6">
+        <div class="flex items-center gap-3 mb-8">
+            <a href="dashboard.html" class="p-2 -ml-2 rounded-full hover:bg-gray-100 text-gray-600">
+                <i data-lucide="arrow-left" class="w-6 h-6"></i>
+            </a>
+            <h1 class="text-2xl font-bold text-gray-900">Health Stats</h1>
+        </div>
+
+        <div class="space-y-4">
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500">
+                        <i data-lucide="ruler" class="w-5 h-5"></i>
+                    </div>
+                    <label class="text-xs font-bold text-gray-400 uppercase tracking-widest">Height (cm)</label>
+                </div>
+                <input type="number" id="height-input" class="w-full text-2xl font-bold outline-none text-gray-800"
+                    placeholder="170">
+            </div>
+
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-500">
+                        <i data-lucide="weight" class="w-5 h-5"></i>
+                    </div>
+                    <label class="text-xs font-bold text-gray-400 uppercase tracking-widest">Weight (kg)</label>
+                </div>
+                <input type="number" id="weight-input" class="w-full text-2xl font-bold outline-none text-gray-800"
+                    placeholder="65">
+            </div>
+
+            <button id="save-health-btn"
+                class="w-full bg-[#009688] text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all mt-4">
+                Save Statistics
+            </button>
+        </div>
+    </div>
+    <script>lucide.createIcons();</script>
+    <script type="module" src="assets/js/health.js"></script>
+</body>
+
+</html>
