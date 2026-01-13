@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Doctor Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         body { -webkit-tap-highlight-color: transparent; background: #f0f2f5; }
-        .mobile-frame { width: 100%; max-width: 375px; min-height: 812px; background: #ffffff; margin: 0 auto; overflow-x: hidden; position: relative; display: flex; flex-direction: column; }
+        .mobile-frame { width: 100%; max-width: 375px; min-height: 812px; background: #f8fafc; margin: 0 auto; overflow-x: hidden; position: relative; display: flex; flex-direction: column; }
         @media (min-width: 768px) { .mobile-frame { border-radius: 40px; border: 8px solid #1a1a1a; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); height: 812px; margin-top: 2rem; overflow-y: auto; } }
     </style>
 </head>
@@ -16,7 +16,7 @@
 
     <div class="mobile-frame">
         
-        <div class="bg-[#006978] pt-12 pb-10 rounded-b-[3rem] shadow-lg relative text-center">
+        <div class="bg-gradient-to-r from-[#009688] to-[#00796b] pt-12 pb-10 rounded-b-[2.5rem] shadow-lg relative text-center">
             <div class="flex justify-between items-center px-6 mb-6">
                 <span class="text-white font-semibold text-lg">07:00</span>
                 <div class="flex gap-2">
@@ -26,81 +26,85 @@
             </div>
 
             <div class="flex justify-center mb-4">
-                <div class="w-28 h-28 bg-white rounded-full flex items-center justify-center shadow-lg overflow-hidden border-4 border-[#AEE2E4]">
+                <div class="w-28 h-28 bg-white rounded-full flex items-center justify-center shadow-lg overflow-hidden border-4 border-[#B2DFDB]">
                     <img src="assets/js/images/logo.png" alt="Clinic Logo" class="w-full h-full object-cover">
                 </div>
             </div>
             
-            <h1 class="text-[#4FD1C5] font-bold text-lg tracking-widest uppercase mb-1">WELCOME BACK,</h1>
+            <h1 class="text-[#B2DFDB] font-bold text-lg tracking-widest uppercase mb-1">WELCOME BACK,</h1>
             <h2 class="text-2xl font-bold text-white tracking-tight" id="doctor-name">Dr. Loading...</h2>
         </div>
 
         <div class="px-6 mt-8 space-y-5">
             
             <a href="view-doctor-schedule.html" class="block group">
-                <div class="bg-[#B2DFDB] p-4 rounded-2xl flex items-center shadow-sm active:scale-95 transition-transform border border-[#80CBC4]">
-                    <div class="p-3 bg-[#006978] rounded-xl mr-4">
+                <div class="bg-[#E0F2F1] p-4 rounded-2xl flex items-center shadow-sm active:scale-95 transition-transform border border-[#B2DFDB] hover:border-[#009688]/30">
+                    <div class="p-3 bg-[#00796b] rounded-xl mr-4 shadow-sm">
                         <i data-lucide="calendar-days" class="w-8 h-8 text-white"></i>
                     </div>
                     <div class="flex-1">
                         <h3 class="text-[#004D40] font-bold text-lg leading-tight">View Appointments</h3>
-                        <p class="text-[#006978] text-xs opacity-70">See your scheduled patients for today</p>
+                        <p class="text-[#00796b] text-xs opacity-80 mt-1">See your scheduled patients for today</p>
                     </div>
-                    <i data-lucide="arrow-right" class="w-6 h-6 text-[#006978]"></i>
+                    <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center">
+                        <i data-lucide="arrow-right" class="w-5 h-5 text-[#00796b]"></i>
+                    </div>
                 </div>
             </a>
 
             <a href="manage-schedule.html" class="block group">
-                <div class="bg-[#B2DFDB] p-4 rounded-2xl flex items-center shadow-sm active:scale-95 transition-transform border border-[#80CBC4]">
-                    <div class="p-3 bg-[#006978] rounded-xl mr-4">
+                <div class="bg-[#E0F2F1] p-4 rounded-2xl flex items-center shadow-sm active:scale-95 transition-transform border border-[#B2DFDB] hover:border-[#009688]/30">
+                    <div class="p-3 bg-[#00796b] rounded-xl mr-4 shadow-sm">
                         <i data-lucide="settings" class="w-8 h-8 text-white"></i>
                     </div>
                     <div class="flex-1">
                         <h3 class="text-[#004D40] font-bold text-lg leading-tight">Update Schedule</h3>
-                        <p class="text-[#006978] text-xs opacity-70">Manage your working hours & availability</p>
+                        <p class="text-[#00796b] text-xs opacity-80 mt-1">Manage your working hours & availability</p>
                     </div>
-                    <i data-lucide="arrow-right" class="w-6 h-6 text-[#006978]"></i>
+                    <div class="w-8 h-8 rounded-full bg-white flex items-center justify-center">
+                         <i data-lucide="arrow-right" class="w-5 h-5 text-[#00796b]"></i>
+                    </div>
                 </div>
             </a>
 
         </div>
 
         <div class="px-6 mt-8">
-             <h3 class="text-[#006978] font-medium text-sm flex items-center gap-2 mb-3">
+             <h3 class="text-[#00796b] font-medium text-sm flex items-center gap-2 mb-3">
                 <i data-lucide="heart" class="w-4 h-4"></i> Patient Feedback & Reputation
             </h3>
-             <div class="bg-[#B2DFDB] rounded-xl p-4 shadow-sm">
+             <div class="bg-[#E0F2F1] rounded-xl p-4 shadow-sm border border-[#B2DFDB]">
                 <div class="flex items-center justify-between mb-2">
                     <div class="flex items-center gap-2">
                         <i data-lucide="star" class="w-8 h-8 text-yellow-500 fill-yellow-500"></i>
                         <div>
                             <span class="text-3xl font-bold text-[#004D40]">4.8</span>
-                            <span class="text-xl font-bold text-[#006978] opacity-60">/5.00</span>
+                            <span class="text-xl font-bold text-[#00796b] opacity-60">/5.00</span>
                         </div>
                     </div>
                     <div class="text-right">
                         <span class="block text-2xl font-bold text-[#004D40]">127</span>
-                        <span class="text-xs text-[#006978] font-medium">Total Reviews</span>
+                        <span class="text-xs text-[#00796b] font-medium">Total Reviews</span>
                     </div>
                 </div>
-                <div class="w-full bg-white/30 h-1.5 rounded-full mt-2">
-                    <div class="bg-[#006978] h-1.5 rounded-full w-[90%]"></div>
+                <div class="w-full bg-white/60 h-1.5 rounded-full mt-2">
+                    <div class="bg-[#009688] h-1.5 rounded-full w-[90%] shadow-sm"></div>
                 </div>
             </div>
         </div>
 
          <div class="px-6 mt-6 pb-8">
-            <h3 class="text-[#006978] font-bold text-lg mb-3 flex items-center gap-2">
+            <h3 class="text-[#00796b] font-bold text-lg mb-3 flex items-center gap-2">
                 <i data-lucide="quote" class="w-5 h-5"></i> Recent Patient Reviews
             </h3>
 
-            <div class="bg-[#CFE8E9] p-4 rounded-xl mb-3">
-                <div class="flex justify-between items-start mb-1">
+            <div class="bg-white p-4 rounded-xl mb-3 border border-[#E0F2F1] shadow-sm">
+                <div class="flex justify-between items-start mb-2">
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 bg-[#006978] rounded-full flex items-center justify-center text-white text-xs font-bold">NH</div>
+                        <div class="w-8 h-8 bg-[#009688] rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm">NH</div>
                         <div>
                             <p class="text-sm font-bold text-[#004D40]">Nadya Hana</p>
-                            <p class="text-[10px] text-[#006978] opacity-70">2 days ago</p>
+                            <p class="text-[10px] text-[#00796b] opacity-70">2 days ago</p>
                         </div>
                     </div>
                     <div class="flex gap-0.5">
@@ -111,12 +115,12 @@
                         <i data-lucide="star" class="w-3 h-3 text-yellow-500 fill-yellow-500"></i>
                     </div>
                 </div>
-                <p class="text-xs text-[#004D40] italic leading-relaxed">"Dr. was very thorough and took time to explain everything. Highly recommend!"</p>
+                <p class="text-xs text-gray-600 italic leading-relaxed pl-11">"Dr. was very thorough and took time to explain everything. Highly recommend!"</p>
             </div>
         </div>
     </div>
 
-    <button onclick="handleLogout()" class="fixed bottom-6 right-6 bg-red-500 hover:bg-red-600 text-white p-4 rounded-full shadow-xl transition-all active:scale-90 z-50">
+    <button onclick="handleLogout()" class="fixed bottom-6 right-6 bg-red-500 hover:bg-red-600 text-white p-4 rounded-full shadow-xl transition-all active:scale-90 z-50 ring-4 ring-white/50">
         <i data-lucide="log-out" class="w-6 h-6"></i>
     </button>
 
@@ -138,7 +142,7 @@
                 if (docRef.exists()) {
                     const data = docRef.data();
                     let name = data.doctorName || data.name || data.fullName || "Doctor";
-                    if (!name.toLowerCase().startsWith('dr')) {
+                    if (!name.toLowerCase().startsWith('dr') && name !== "Doctor") {
                         name = "Dr. " + name;
                     }
                     document.getElementById('doctor-name').textContent = name;
