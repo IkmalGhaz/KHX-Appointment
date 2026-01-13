@@ -1,19 +1,23 @@
 import { auth, db, onAuthStateChanged, collection, query, where, getDocs, doc, updateDoc, signOut } from './firebase-config.js';
 
-// Modal Elements
+// --- Modal Elements ---
 const profileViewModal = document.getElementById('profile-view-modal');
 const profileEditModal = document.getElementById('profile-edit-modal');
 const profileIconBtn = document.getElementById('logout-btn');
 
-// View Mode Elements
+// --- Appointment Modal Elements ---
+const aptModal = document.getElementById('apt-modal');
+const viewAptBtn = document.getElementById('view-apt-btn');
+const closeAptModalBtn = document.getElementById('close-modal');
+
+// --- View Profile Mode Elements ---
 const viewFullName = document.getElementById('view-full-name');
 const viewPhone = document.getElementById('view-phone');
 const viewEmail = document.getElementById('view-email');
-const viewDob = document.getElementById('view-dob');
 const viewAddress = document.getElementById('view-address');
 const viewImg = document.getElementById('view-prof-img');
 
-// Edit Mode Elements
+// --- Edit Profile Mode Elements ---
 const editForm = document.getElementById('edit-profile-form');
 const editNameInput = document.getElementById('edit-prof-name');
 const editPhoneInput = document.getElementById('edit-prof-phone');
@@ -23,7 +27,7 @@ const imgUploadInput = document.getElementById('img-upload');
 
 let currentUserDocId = null;
 
-// --- Modal Handlers ---
+// --- PROFILE MODAL HANDLERS ---
 profileIconBtn.onclick = () => profileViewModal.classList.remove('hidden');
 window.closeViewProfile = () => profileViewModal.classList.add('hidden');
 
@@ -37,7 +41,22 @@ window.closeEditProfile = () => {
     profileViewModal.classList.remove('hidden');
 };
 
-// --- Data Population ---
+// --- APPOINTMENT MODAL HANDLERS ---
+if (viewAptBtn) {
+    viewAptBtn.onclick = () => {
+        aptModal.classList.remove('hidden');
+        // Trigger the switchTab function defined in view-appointments.js
+        if (typeof window.switchTab === 'function') {
+            window.switchTab('Upcoming');
+        }
+    };
+}
+
+if (closeAptModalBtn) {
+    closeAptModalBtn.onclick = () => aptModal.classList.add('hidden');
+}
+
+// --- DATA POPULATION (FETCHING USER DOC) ---
 async function populateProfile(uid) {
     try {
         const q = query(collection(db, "Users"), where("firebaseUid", "==", uid));
@@ -45,7 +64,7 @@ async function populateProfile(uid) {
 
         if (!snapshot.empty) {
             const userDoc = snapshot.docs[0];
-            currentUserDocId = userDoc.id;
+            currentUserDocId = userDoc.id; // Store Firestore Document ID for updates
             const data = userDoc.data();
 
             // Populate View Mode
@@ -53,7 +72,6 @@ async function populateProfile(uid) {
             viewFullName.innerText = data.fullName || "--";
             viewPhone.innerText = data.phone || "--";
             viewEmail.innerText = data.email || "--";
-            viewDob.innerText = data.dateOfBirth || "--";
             viewAddress.innerText = data.mailingAddress || "--";
             if (data.profilePictureUrl) viewImg.src = data.profilePictureUrl;
 
@@ -63,7 +81,7 @@ async function populateProfile(uid) {
             editAddressInput.value = data.mailingAddress || "";
             if (data.profilePictureUrl) editImgPreview.src = data.profilePictureUrl;
 
-            // Update Main Dashboard Header
+            // Update Dashboard Header
             document.getElementById('user-name').innerText = data.fullName || "Valued Patient";
         }
     } catch (e) {
@@ -71,7 +89,7 @@ async function populateProfile(uid) {
     }
 }
 
-// --- Edit/Update Logic ---
+// --- EDIT PROFILE LOGIC ---
 imgUploadInput.onchange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -99,7 +117,7 @@ editForm.onsubmit = async (e) => {
         await updateDoc(userRef, updatedData);
 
         alert("Profile updated successfully!");
-        await populateProfile(auth.currentUser.uid); // Refresh data
+        await populateProfile(auth.currentUser.uid); // Refresh displayed data
         closeEditProfile();
     } catch (error) {
         console.error("Update Error:", error);
@@ -110,6 +128,7 @@ editForm.onsubmit = async (e) => {
     }
 };
 
+// --- LOGOUT LOGIC ---
 document.getElementById('profile-logout-btn').onclick = async () => {
     if (confirm("Logout from KHX Clinic?")) {
         await signOut(auth);
