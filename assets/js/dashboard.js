@@ -1,4 +1,4 @@
-import { auth, db, onAuthStateChanged, collection, query, where, getDocs, doc, updateDoc, signOut } from './firebase-config.js';
+import { auth, db, storage, onAuthStateChanged, collection, query, where, onSnapshot, doc, updateDoc, signOut, ref, uploadBytes, getDownloadURL } from './firebase-config.js';
 
 // --- Modal Elements ---
 const profileViewModal = document.getElementById('profile-view-modal');
@@ -45,7 +45,6 @@ window.closeEditProfile = () => {
 if (viewAptBtn) {
     viewAptBtn.onclick = () => {
         aptModal.classList.remove('hidden');
-        // Trigger the switchTab function defined in view-appointments.js
         if (typeof window.switchTab === 'function') {
             window.switchTab('Upcoming');
         }
@@ -56,19 +55,19 @@ if (closeAptModalBtn) {
     closeAptModalBtn.onclick = () => aptModal.classList.add('hidden');
 }
 
-// --- DATA POPULATION (FETCHING USER DOC) ---
-async function populateProfile(uid) {
-    try {
-        const q = query(collection(db, "Users"), where("firebaseUid", "==", uid));
-        const snapshot = await getDocs(q);
+// --- OPTIMIZED DATA POPULATION (REAL-TIME) ---
+function setupProfileListener(uid) {
+    // Optimization: Using onSnapshot for instant local caching and real-time updates
+    const q = query(collection(db, "Users"), where("firebaseUid", "==", uid));
 
+    onSnapshot(q, (snapshot) => {
         if (!snapshot.empty) {
             const userDoc = snapshot.docs[0];
-            currentUserDocId = userDoc.id; // Store Firestore Document ID for updates
+            currentUserDocId = userDoc.id;
             const data = userDoc.data();
 
             // Populate View Mode
-            document.getElementById('view-full-name-header').innerText = data.fullName || "Jane Smith";
+            document.getElementById('view-full-name-header').innerText = data.fullName || "User Name";
             viewFullName.innerText = data.fullName || "--";
             viewPhone.innerText = data.phone || "--";
             viewEmail.innerText = data.email || "--";
@@ -84,12 +83,12 @@ async function populateProfile(uid) {
             // Update Dashboard Header
             document.getElementById('user-name').innerText = data.fullName || "Valued Patient";
         }
-    } catch (e) {
-        console.error("Profile Load Error:", e);
-    }
+    }, (error) => {
+        console.error("Profile Listener Error:", error);
+    });
 }
 
-// --- EDIT PROFILE LOGIC ---
+// --- EDIT PROFILE LOGIC (FIXED WITH FIREBASE STORAGE) ---
 imgUploadInput.onchange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -106,22 +105,31 @@ editForm.onsubmit = async (e) => {
     saveBtn.disabled = true;
 
     try {
+        let photoUrl = editImgPreview.src;
+        const file = imgUploadInput.files[0];
+
+        // If a new file was selected, upload it to Firebase Storage to avoid Firestore size limits
+        if (file) {
+            const storageRef = ref(storage, `profile_pics/${auth.currentUser.uid}`);
+            const snapshot = await uploadBytes(storageRef, file);
+            photoUrl = await getDownloadURL(snapshot.ref);
+        }
+
         const updatedData = {
             fullName: editNameInput.value,
             phone: editPhoneInput.value,
             mailingAddress: editAddressInput.value,
-            profilePictureUrl: editImgPreview.src // Saving as Base64
+            profilePictureUrl: photoUrl
         };
 
         const userRef = doc(db, "Users", currentUserDocId);
         await updateDoc(userRef, updatedData);
 
         alert("Profile updated successfully!");
-        await populateProfile(auth.currentUser.uid); // Refresh displayed data
         closeEditProfile();
     } catch (error) {
         console.error("Update Error:", error);
-        alert("Failed to update profile.");
+        alert("Failed to update profile: " + error.message);
     } finally {
         saveBtn.innerText = "Save Changes";
         saveBtn.disabled = false;
@@ -145,7 +153,6 @@ function initAnalyticsCharts() {
         scales: { x: { grid: { display: false } }, y: { grid: { display: false }, beginAtZero: true } }
     };
 
-    // 1. Top Doctors (Horizontal Bar)
     new Chart(document.getElementById('topDoctorsChart'), {
         type: 'bar',
         data: {
@@ -159,7 +166,6 @@ function initAnalyticsCharts() {
         options: { ...chartOptions, indexAxis: 'y' }
     });
 
-    // 2. Age Analysis (Doughnut)
     new Chart(document.getElementById('ageAnalysisChart'), {
         type: 'doughnut',
         data: {
@@ -177,7 +183,6 @@ function initAnalyticsCharts() {
         }
     });
 
-    // 3. Top Services (Vertical Bar)
     new Chart(document.getElementById('servicesChart'), {
         type: 'bar',
         data: {
@@ -195,16 +200,20 @@ function initAnalyticsCharts() {
 // --- MAIN AUTH OBSERVER ---
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        // 1. Load User Profile
-        await populateProfile(user.uid);
+        // 1. Setup Real-time Profile Listener
+        setupProfileListener(user.uid);
 
-        // 2. Initialize Charts
+        // 2. OPTIMIZATION: Pre-fetch Appointments immediately so data is ready for the modal
+        if (typeof window.loadAppointments === 'function') {
+            window.loadAppointments(user.uid);
+        }
+
+        // 3. Initialize Charts
         initAnalyticsCharts();
 
-        // 3. Refresh Lucide Icons
+        // 4. Refresh Lucide Icons
         if (window.lucide) window.lucide.createIcons();
     } else {
-        // Redirect to login if not authenticated
         window.location.href = "index.html";
     }
 });

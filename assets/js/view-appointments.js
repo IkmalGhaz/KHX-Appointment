@@ -1,37 +1,36 @@
-import { auth, db, onAuthStateChanged, collection, query, where, getDocs, updateDoc, doc } from './firebase-config.js';
+import { auth, db, onAuthStateChanged, collection, query, where, onSnapshot, updateDoc, doc } from './firebase-config.js';
 
 let currentTab = 'Upcoming';
-let appointmentToCancel = null; // Store ID globally for the modals
+let appointmentToCancel = null;
 const aptList = document.getElementById('appointments-list');
 
 // Modal Elements
 const cancelModal = document.getElementById('cancel-confirm-modal');
 const reasonInput = document.getElementById('cancel-reason-input');
-const confirmBtn = document.getElementById('confirm-cancel-btn'); // Button in the reason modal
-const finalConfirmBtn = document.getElementById('final-confirm-btn'); // Button in the red confirmation modal
+const confirmBtn = document.getElementById('confirm-cancel-btn');
+const finalConfirmBtn = document.getElementById('final-confirm-btn');
 
+// 1. Auth Observer
 onAuthStateChanged(auth, (user) => {
     if (user) {
-        loadAppointments(user.uid);
+        // Initialize the real-time listener
+        window.loadAppointments(user.uid);
     }
 });
 
 // --- CANCELLATION MODAL LOGIC ---
 
-// 1. Open Reason Modal when 'Cancel' is clicked on an appointment card
 window.cancelBooking = (id) => {
     appointmentToCancel = id;
-    reasonInput.value = ''; // Clear previous input
+    reasonInput.value = '';
     cancelModal.classList.remove('hidden');
 };
 
-// Close Reason Modal
 window.closeCancelModal = () => {
     cancelModal.classList.add('hidden');
     appointmentToCancel = null;
 };
 
-// 2. When 'Confirm' is clicked in Reason Modal -> Show Red Confirmation Pop-up
 if (confirmBtn) {
     confirmBtn.onclick = () => {
         const reason = reasonInput.value.trim();
@@ -39,18 +38,14 @@ if (confirmBtn) {
             alert("Please enter a reason for cancellation.");
             return;
         }
-        // Hide reason modal and show the soft transparent red confirmation modal
         cancelModal.classList.add('hidden');
         document.getElementById('booking-confirm-modal').classList.remove('hidden');
     };
 }
 
-// 3. When 'Yes, Confirm Now' is clicked in Red Modal -> Wait 3s -> Update Firestore
 if (finalConfirmBtn) {
     finalConfirmBtn.onclick = async () => {
         const reason = reasonInput.value.trim();
-
-        // Update button UI to show countdown/loading
         finalConfirmBtn.innerText = "Confirming in 3s...";
         finalConfirmBtn.disabled = true;
 
@@ -58,8 +53,8 @@ if (finalConfirmBtn) {
         setTimeout(async () => {
             try {
                 finalConfirmBtn.innerText = "Processing...";
-
                 const aptRef = doc(db, "bookings", appointmentToCancel);
+
                 await updateDoc(aptRef, {
                     status: 'Cancelled',
                     cancellationReason: reason,
@@ -67,15 +62,12 @@ if (finalConfirmBtn) {
                 });
 
                 alert("Appointment successfully cancelled.");
-
-                // Hide modal and refresh data
                 document.getElementById('booking-confirm-modal').classList.add('hidden');
-                location.reload();
+
+                // NOTE: No location.reload() needed because onSnapshot updates the UI automatically!
             } catch (error) {
                 console.error("Cancellation Error:", error);
                 alert("Failed to cancel: " + error.message);
-
-                // Reset button state on error
                 finalConfirmBtn.innerText = "Yes, Confirm Now";
                 finalConfirmBtn.disabled = false;
             }
@@ -83,50 +75,64 @@ if (finalConfirmBtn) {
     };
 }
 
-// Helper to close the red confirmation modal
 window.closeConfirmModal = () => {
     document.getElementById('booking-confirm-modal').classList.add('hidden');
-    // If user goes back from red modal, reopen the reason modal
     cancelModal.classList.remove('hidden');
 };
 
-// --- APPOINTMENT LIST & TAB LOGIC ---
+// --- APPOINTMENT LIST & TAB LOGIC (OPTIMIZED) ---
+
+// Global state to hold all fetched appointments for easy filtering
+let allUserAppointments = [];
 
 window.switchTab = (tab) => {
     currentTab = tab;
+
+    // Update UI Tab Buttons
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.remove('border-[#009688]', 'text-[#009688]');
         btn.classList.add('border-transparent', 'text-gray-400');
     });
-    event.target.classList.add('border-[#009688]', 'text-[#009688]');
-    event.target.classList.remove('border-transparent', 'text-gray-400');
 
-    const user = auth.currentUser;
-    if (user) loadAppointments(user.uid);
+    // Set active tab style
+    if (event && event.target) {
+        event.target.classList.add('border-[#009688]', 'text-[#009688]');
+        event.target.classList.remove('border-transparent', 'text-gray-400');
+    }
+
+    // Re-render the list based on the new tab selection
+    applyFiltersAndRender();
 };
 
-async function loadAppointments(uid) {
+// Main Fetching Function using onSnapshot
+window.loadAppointments = (uid) => {
     aptList.innerHTML = '<div class="text-center py-10"><div class="animate-spin inline-block w-6 h-6 border-2 border-[#009688] border-t-transparent rounded-full"></div></div>';
 
-    try {
-        const q = query(collection(db, "bookings"), where("patientId", "==", uid));
-        const snapshot = await getDocs(q);
-        const appointments = [];
+    const q = query(collection(db, "bookings"), where("patientId", "==", uid));
 
-        snapshot.forEach(doc => appointments.push({ id: doc.id, ...doc.data() }));
-
-        const filtered = appointments.filter(apt => {
-            if (currentTab === 'Upcoming') return apt.status === 'Upcoming';
-            if (currentTab === 'Cancelled') return apt.status === 'Cancelled';
-            if (currentTab === 'Past') return apt.status === 'Completed';
-            return false;
+    // Real-time listener: this stays active and updates the UI whenever Firestore data changes
+    onSnapshot(q, (snapshot) => {
+        allUserAppointments = [];
+        snapshot.forEach(doc => {
+            allUserAppointments.push({ id: doc.id, ...doc.data() });
         });
 
-        renderList(filtered);
-    } catch (error) {
+        applyFiltersAndRender();
+    }, (error) => {
         console.error("Fetch error:", error);
         aptList.innerHTML = '<p class="text-red-500 text-center">Error loading appointments.</p>';
-    }
+    });
+};
+
+function applyFiltersAndRender() {
+    const filtered = allUserAppointments.filter(apt => {
+        if (currentTab === 'Upcoming') return apt.status === 'Upcoming' || apt.status === 'Pending Approval';
+        if (currentTab === 'Cancelled') return apt.status === 'Cancelled';
+        if (currentTab === 'Past') return apt.status === 'Completed';
+        return false;
+    });
+
+    renderList(filtered);
 }
 
 function renderList(list) {
@@ -145,14 +151,15 @@ function renderList(list) {
             <p class="text-xs text-gray-500 mb-3">${apt.doctorName}</p>
             <div class="flex justify-between items-center pt-3 border-t border-gray-50">
                 <span class="text-lg font-bold text-gray-700">${apt.time}</span>
-                ${apt.status === 'Upcoming' ? `<button onclick="cancelBooking('${apt.id}')" class="text-xs font-bold text-red-500 hover:underline">Cancel</button>` : ''}
+                ${(apt.status === 'Upcoming' || apt.status === 'Pending Approval') ?
+            `<button onclick="cancelBooking('${apt.id}')" class="text-xs font-bold text-red-500 hover:underline">Cancel</button>` : ''}
             </div>
         </div>
     `).join('');
 }
 
 function getStatusStyle(status) {
-    if (status === 'Upcoming') return 'bg-teal-50 text-teal-600';
+    if (status === 'Upcoming' || status === 'Pending Approval') return 'bg-teal-50 text-teal-600';
     if (status === 'Cancelled') return 'bg-red-50 text-red-600';
     return 'bg-gray-50 text-gray-600';
 }
