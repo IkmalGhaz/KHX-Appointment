@@ -78,8 +78,8 @@
 
         // --- STATE ---
         let currentDoctorId = null;
-        let pendingAction = null; // Stores data about the date being clicked
-        let existingTimeOff = []; // Cache for unavailable dates
+        let pendingAction = null; 
+        let existingTimeOff = []; 
 
         // --- DOM ELEMENTS ---
         const doctorNameEl = document.getElementById('doctor-name');
@@ -93,6 +93,7 @@
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentDoctorId = user.uid;
+                // Pass the UID to load profile
                 await loadDoctorProfile(user.uid);
                 await refreshCalendar(); 
             } else {
@@ -100,13 +101,32 @@
             }
         });
 
+        // --- FIX: ROBUST NAME LOADING ---
         async function loadDoctorProfile(uid) {
             try {
                 const docRef = await getDoc(doc(db, "Users", uid));
+                
                 if (docRef.exists()) {
-                    doctorNameEl.textContent = `${docRef.data().doctorName || "Doctor"}`;
+                    const data = docRef.data();
+                    console.log("Doctor Data found:", data); // Check your console (F12) to see what fields exist!
+
+                    // 1. Try to find the name in 'doctorName', 'name', or 'fullName'
+                    let name = data.doctorName || data.name || data.fullName || "Doctor";
+
+                    // 2. Formatting: Ensure it starts with "Dr."
+                    if (!name.toLowerCase().startsWith('dr') && name !== "Doctor") {
+                        name = `Dr. ${name}`;
+                    }
+
+                    doctorNameEl.textContent = name;
+                } else {
+                    console.log("No User document found in DB for ID:", uid);
+                    doctorNameEl.textContent = "Dr. Unknown";
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) { 
+                console.error("Error fetching doctor profile:", e); 
+                doctorNameEl.textContent = "Error Loading Name";
+            }
         }
 
         window.handleLogout = async () => {
@@ -119,7 +139,6 @@
         async function refreshCalendar() {
             calendarContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-40"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div><p class="text-xs text-gray-400 mt-2">Syncing Schedule...</p></div>';
             
-            // Fetch data freshly from DB
             existingTimeOff = await fetchTimeOff(currentDoctorId);
 
             calendarContainer.innerHTML = ''; 
@@ -155,7 +174,6 @@
                     const dateStr = `${d} ${monthName} ${year}`;
                     const isUnavailable = existingTimeOff.includes(dateStr);
 
-                    // Style
                     if (isUnavailable) {
                         btn.className = "w-9 h-9 flex items-center justify-center rounded-full text-sm font-bold cursor-pointer transition-all bg-red-50 text-red-500 border border-red-200 shadow-sm";
                     } else {
@@ -163,8 +181,6 @@
                     }
                     
                     btn.textContent = d;
-                    
-                    // Click opens MODAL, not direct action
                     btn.onclick = () => openModal(dateStr, isUnavailable);
                     
                     grid.appendChild(btn);
@@ -178,10 +194,8 @@
         // --- 3. MODAL & LOGIC ---
 
         window.openModal = (dateStr, isCurrentlyUnavailable) => {
-            // Set global pending action
             pendingAction = { dateStr, isCurrentlyUnavailable };
 
-            // Update Modal Text based on state
             if (isCurrentlyUnavailable) {
                 modalTitle.innerText = "Mark as Available?";
                 modalTitle.className = "text-lg font-bold text-gray-900 text-center mb-2";
@@ -196,7 +210,6 @@
                 confirmBtn.className = "py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-200 transition-colors";
             }
 
-            // Show Modal
             modal.classList.remove('modal-enter');
             modal.classList.add('modal-active');
         };
@@ -207,20 +220,17 @@
             pendingAction = null;
         };
 
-        // Attach event listener to confirm button
         confirmBtn.addEventListener('click', async () => {
             if (!pendingAction) return;
 
             const { dateStr, isCurrentlyUnavailable } = pendingAction;
             
-            // Show loading state on button
             const originalBtnText = confirmBtn.innerText;
             confirmBtn.innerText = "Processing...";
             confirmBtn.disabled = true;
 
             try {
                 if (isCurrentlyUnavailable) {
-                    // REMOVE FROM DB
                     const q = query(collection(db, "TimeOff"), 
                         where("doctorId", "==", currentDoctorId),
                         where("date", "==", dateStr)
@@ -230,18 +240,16 @@
                     await Promise.all(deletePromises);
                     showToast("Date marked as Available");
                 } else {
-                    // ADD TO DB
                     await addDoc(collection(db, "TimeOff"), {
                         doctorId: currentDoctorId,
                         date: dateStr,
-                        createdAt: new Date() // Helpful for sorting
+                        createdAt: new Date()
                     });
                     showToast("Date marked as Unavailable");
                 }
                 
-                // Success: Close modal and refresh UI
                 closeModal();
-                await refreshCalendar(); // Re-fetch to ensure sync
+                await refreshCalendar(); 
 
             } catch (error) {
                 console.error("FIREBASE ERROR:", error);
@@ -265,7 +273,6 @@
                 });
             } catch (e) {
                 console.error("Error fetching time off:", e);
-                // If permission denied, this will show in console
             }
             return list;
         }
