@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Feedback & Rating</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { -webkit-tap-highlight-color: transparent; background: #f0f2f5; font-family: sans-serif; }
+        .mobile-frame { width: 100%; max-width: 375px; height: 812px; background: #fafafa; margin: 0 auto; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+        @media (min-width: 768px) { .mobile-frame { border-radius: 40px; border: 8px solid #1a1a1a; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); height: 812px; margin-top: 2rem; } }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .star-active { fill: #FBBF24; color: #FBBF24; } /* Amber-400 */
+        .star-inactive { fill: none; color: #D1D5DB; } /* Gray-300 */
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+
+    <div class="mobile-frame">
+        
+        <div class="bg-white px-6 pt-8 pb-4 sticky top-0 z-20 border-b border-gray-100">
+            <div class="flex items-center gap-3">
+                <a href="dashboard.html" class="p-2 -ml-2 rounded-full hover:bg-gray-50 text-gray-600">
+                    <i data-lucide="arrow-left" class="w-6 h-6"></i>
+                </a>
+                <h1 class="text-xl font-bold text-gray-900">Rate Your Visit</h1>
+            </div>
+            <p class="text-sm text-gray-500 mt-1 pl-1">Select a completed appointment to rate.</p>
+        </div>
+
+        <div class="flex-1 overflow-y-auto no-scrollbar px-6 py-6" id="list-container">
+            <div class="space-y-4 animate-pulse">
+                <div class="h-24 bg-gray-200 rounded-2xl"></div>
+                <div class="h-24 bg-gray-200 rounded-2xl"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="rating-modal" class="absolute inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-end sm:items-center justify-center transition-opacity">
+        <div class="bg-white w-full sm:w-[90%] rounded-t-3xl sm:rounded-3xl p-6 animate-[slideUp_0.3s_ease-out]">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 class="font-bold text-lg text-gray-900">Write a Review</h3>
+                    <p class="text-xs text-gray-400" id="modal-service-name">Service Name</p>
+                </div>
+                <button onclick="closeModal()" class="bg-gray-100 p-2 rounded-full text-gray-500"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <div class="flex justify-center gap-2 mb-6" id="star-container">
+                </div>
+
+            <textarea id="feedback-comment" rows="4" placeholder="How was your experience with Dr. Ali?" 
+                class="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm outline-none focus:ring-2 focus:ring-[#009688] resize-none mb-6"></textarea>
+
+            <button onclick="submitFeedback()" id="submit-btn" class="w-full bg-[#009688] text-white font-bold py-4 rounded-xl shadow-lg shadow-teal-200 active:scale-95 transition-all">
+                Submit Review
+            </button>
+        </div>
+    </div>
+
+    <script>lucide.createIcons();</script>
+    <script type="module" src="assets/js/feedback.js"></script>
+</body>
+</html>

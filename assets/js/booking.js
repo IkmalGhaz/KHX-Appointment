@@ -1,4 +1,9 @@
-import { db, collection, getDocs, query, where, addDoc, auth, onAuthStateChanged } from './firebase-config.js';
+import { db, collection, getDocs, query, where, addDoc, doc, updateDoc, auth, onAuthStateChanged } from './firebase-config.js';
+
+// --- TOYYIBPAY CONFIGURATION ---
+const TOYYIB_SECRET_KEY = 'o504fpag-2soa-wror-wz4j-t2zw35csf6ux'; // PASTE YOUR SECRET KEY HERE
+const TOYYIB_CATEGORY_CODE = 'vqli37z5'; // PASTE YOUR CATEGORY CODE HERE
+const PROXY_URL = 'https://corsproxy.io/?'; 
 
 // --- HELPERS ---
 
@@ -191,8 +196,6 @@ async function loadDoctors() {
                 bookingData.doctorId = data.id;
                 bookingData.doctorName = data.name;
                 
-                console.log(`Checking blocked dates for Dr ID: ${data.id} (${data.name})`);
-                
                 await fetchDoctorSchedule(data.id);
                 initFlatpickr(); 
                 showStep(3);
@@ -218,8 +221,6 @@ async function fetchDoctorSchedule(doctorId) {
         const q = query(collection(db, "TimeOff"), where("doctorId", "==", doctorId));
         const snapshot = await getDocs(q);
         
-        console.log(`Found ${snapshot.size} blocked dates in DB for this doctor.`);
-        
         snapshot.forEach(doc => {
             const rawDate = doc.data().date; 
             const dateObj = parseFriendlyDateToObj(rawDate);
@@ -232,7 +233,7 @@ async function fetchDoctorSchedule(doctorId) {
     }
 }
 
-// --- 5. INITIALIZE FLATPICKR (WITH 3 MONTH LIMIT) ---
+// --- 5. INITIALIZE FLATPICKR ---
 function initFlatpickr() {
     const timeSlotContainer = document.getElementById('time-slots');
     timeSlotContainer.innerHTML = '<p class="text-gray-400 text-sm italic col-span-2">Select a date above to see times.</p>';
@@ -244,10 +245,7 @@ function initFlatpickr() {
 
     flatpickr("#date-picker", {
         minDate: "today",
-        
-        // --- NEW: Limit booking to 3 months from today ---
         maxDate: new Date().fp_incr(90), 
-        
         disable: blockedDates, 
         dateFormat: "d F Y",   
         disableMobile: "true", 
@@ -306,42 +304,187 @@ window.selectPayment = (method) => {
 window.processPayment = async () => {
     const btn = document.getElementById('pay-btn-main');
     const originalText = btn.innerText;
+    
+    if (!auth.currentUser) {
+        alert("Please login first.");
+        return;
+    }
+
     btn.innerHTML = "Processing...";
     btn.disabled = true;
 
-    setTimeout(async () => {
-        try {
-            const user = auth.currentUser;
-            if (user) {
-                await addDoc(collection(db, "bookings"), {
-                    patientId: user.uid,
-                    doctorName: bookingData.doctorName,
-                    doctorId: bookingData.doctorId,
-                    serviceName: bookingData.serviceName,
-                    price: bookingData.price,
-                    date: bookingData.date, 
-                    time: bookingData.time,
-                    paymentMethod: selectedMethod,
-                    paymentStatus: "Paid",
-                    status: "Upcoming",
-                    createdAt: new Date()
-                });
-            }
+    try {
+        const user = auth.currentUser;
+        
+        // 1. Create Booking in Firestore (Status: Pending)
+        const docRef = await addDoc(collection(db, "bookings"), {
+            patientId: user.uid,
+            doctorName: bookingData.doctorName,
+            doctorId: bookingData.doctorId,
+            serviceName: bookingData.serviceName,
+            price: bookingData.price,
+            date: bookingData.date, 
+            time: bookingData.time,
+            paymentMethod: selectedMethod,
+            paymentStatus: "Pending", // Important: Pending until paid
+            status: "Pending Approval",
+            createdAt: new Date()
+        });
+        
+        const bookingId = docRef.id;
+
+        // 2. Check Payment Method
+        if (selectedMethod === 'fpx') {
+            // Initiate ToyyibPay
+            await initiateToyyibPay(bookingId, bookingData.price, user);
+        } else {
+            // Simulate Success for Card/Wallet (since no gateway is set for them)
+            await updateDoc(doc(db, "bookings", bookingId), {
+                paymentStatus: "Paid",
+                status: "Upcoming"
+            });
             showStep(5);
-        } catch (e) {
-            console.error("Booking failed", e);
-            alert("Payment failed. Please try again.");
-            btn.innerText = originalText;
-            btn.disabled = false;
         }
-    }, 1500);
+
+    } catch (e) {
+        console.error("Booking failed", e);
+        alert("Error: " + e.message);
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
 };
+
+// --- TOYYIBPAY INTEGRATION (FIXED) ---
+async function initiateToyyibPay(bookingId, price, user) {
+    const amountInCents = Math.round(parseFloat(price) * 100);
+    const returnUrl = `${window.location.origin}${window.location.pathname}?status=success&booking_id=${bookingId}`;
+
+    // --- FIX START: HANDLE BILL NAME LENGTH ---
+    // ToyyibPay only allows 30 chars for billName. We truncate it to ensure safety.
+    let safeBillName = `Appt: ${bookingData.serviceName}`; 
+    if (safeBillName.length > 30) {
+        safeBillName = safeBillName.substring(0, 30);
+    }
+
+    // Also limit description to 100 chars just in case
+    let safeBillDesc = `Dr. ${bookingData.doctorName} on ${bookingData.date}`;
+    if (safeBillDesc.length > 100) {
+        safeBillDesc = safeBillDesc.substring(0, 100);
+    }
+    // --- FIX END ---
+
+    const params = new URLSearchParams();
+    params.append('userSecretKey', TOYYIB_SECRET_KEY);
+    params.append('categoryCode', TOYYIB_CATEGORY_CODE);
+    params.append('billName', safeBillName); // Used the safe truncated name
+    params.append('billDescription', safeBillDesc);
+    params.append('billPriceSetting', 1);
+    params.append('billPayorInfo', 1);
+    params.append('billAmount', amountInCents);
+    params.append('billReturnUrl', returnUrl);
+    params.append('billCallbackUrl', 'https://reqres.in/api/users'); // Placeholder
+    params.append('billExternalReferenceNo', bookingId);
+    params.append('billTo', user.displayName || 'Patient');
+    params.append('billEmail', user.email);
+    params.append('billPhone', '0123456789');
+
+    try {
+        const targetUrl = 'https://dev.toyyibpay.com/index.php/api/createBill';
+        
+        // Use Proxy to bypass CORS
+        const response = await fetch(PROXY_URL + encodeURIComponent(targetUrl), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params
+        });
+
+        const data = await response.json();
+
+        if (data && data[0] && data[0].BillCode) {
+            const billCode = data[0].BillCode;
+            
+            // Save BillCode before redirecting
+            await updateDoc(doc(db, "bookings", bookingId), { billCode: billCode });
+
+            // Redirect to Payment Gateway
+            window.location.href = `https://dev.toyyibpay.com/${billCode}`;
+        } else {
+            // Detailed error handling
+            let errMsg = "Unknown Gateway Error";
+            if (data && data.msg) errMsg = data.msg;
+            else if (Array.isArray(data)) errMsg = JSON.stringify(data);
+            
+            alert("Payment Gateway Error: " + errMsg);
+            resetPayButton();
+        }
+    } catch (error) {
+        console.error("Payment Error:", error);
+        alert("Could not connect to payment gateway.");
+        resetPayButton();
+    }
+}
+
+function resetPayButton() {
+    const btn = document.getElementById('pay-btn-main');
+    btn.disabled = false;
+    btn.innerText = "Try Again";
+}
+
+// --- CHECK RETURN FROM PAYMENT ---
+async function checkPaymentReturn() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const status = urlParams.get('status');
+    const bookingId = urlParams.get('booking_id');
+    const billCode = urlParams.get('billcode');
+
+    if (status === 'success' && bookingId) {
+        // Show loading immediately
+        document.body.innerHTML = `
+            <div style="display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;gap:20px;font-family:sans-serif;">
+                <div class="loader"></div>
+                <h2 style="color:#004d40">Verifying Payment...</h2>
+            </div>`;
+        
+        try {
+            const bookingRef = doc(db, "bookings", bookingId);
+            await updateDoc(bookingRef, {
+                paymentStatus: "Paid",
+                status: "Upcoming",
+                billCode: billCode || 'unknown'
+            });
+
+            // Clean URL and show Success Step
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+            // Restore Body Content
+            window.location.reload(); 
+            // Note: Reloading will trigger onAuthStateChanged again, but since URL params are gone,
+            // we need a mechanism to show Step 5.
+            // BETTER APPROACH: Save a flag in localStorage
+            localStorage.setItem('paymentSuccess', 'true');
+        } catch (error) {
+            console.error("Update Error:", error);
+            alert("Payment recorded, but status update failed.");
+            window.location.href = 'dashboard.html';
+        }
+    }
+}
 
 // --- INITIALIZATION ---
 onAuthStateChanged(auth, (user) => {
     if (!user) {
         window.location.href = "index.html";
     } else {
-        loadServices();
+        // Check if we just returned from successful payment
+        if (localStorage.getItem('paymentSuccess') === 'true') {
+            localStorage.removeItem('paymentSuccess');
+            loadServices().then(() => {
+                showStep(5); // Jump directly to Success screen
+            });
+        } else {
+            // Check if this IS the return URL
+            checkPaymentReturn();
+            loadServices();
+        }
     }
 });
