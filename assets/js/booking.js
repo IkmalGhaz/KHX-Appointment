@@ -125,9 +125,10 @@ async function loadServices() {
     }
 }
 
-// --- 3. LOAD DOCTORS ---
+// --- 3. LOAD DOCTORS (FIXED) ---
 async function loadDoctors() {
     const container = document.getElementById('doctor-list');
+    // Loading State
     container.innerHTML = `
         <div class="animate-pulse bg-white p-4 rounded-2xl h-24 border border-gray-100 mb-3 shadow-sm"></div>
         <div class="animate-pulse bg-white p-4 rounded-2xl h-24 border border-gray-100 mb-3 shadow-sm"></div>
@@ -143,6 +144,8 @@ async function loadDoctors() {
         snapshot.forEach(doc => {
             const data = doc.data();
             const serviceStr = JSON.stringify(data.serviceId || data.serviceIds || "");
+            
+            // Filter logic
             if (serviceStr.includes(selectedId) || snapshot.size < 5) {
                 doctors.push({
                     id: doc.id,
@@ -150,6 +153,8 @@ async function loadDoctors() {
                     role: data.drSpecialization || "Specialist",
                     exp: data.yearOfExperience || 5,
                     rating: data.rating || "5.0",
+                    // --- FIX 1: RETRIEVE IMAGE FROM FIREBASE ---
+                    image: data.image || data.profilePic || null 
                 });
             }
         });
@@ -163,11 +168,22 @@ async function loadDoctors() {
             const card = document.createElement('div');
             card.className = "relative bg-white p-4 rounded-2xl border border-gray-100 shadow-sm mb-3 cursor-pointer hover:border-[#009688] hover:shadow-md transition-all flex items-center gap-4 group overflow-hidden";
             
-            card.innerHTML = `
+            // --- FIX 2: CREATE THE PROFILE HTML LOGIC ---
+            let profileHtml;
+            if (data.image) {
+                // If image exists, create an IMG tag
+                profileHtml = `<img src="${data.image}" class="w-14 h-14 rounded-full object-cover border border-gray-200 shrink-0" alt="${data.name}">`;
+            } else {
+                // If no image, create the DEFAULT ICON
+                profileHtml = `
                 <div class="w-14 h-14 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 shrink-0 group-hover:bg-[#e0f2f1] group-hover:text-[#009688] transition-colors">
                     <i data-lucide="user" class="w-7 h-7"></i>
-                </div>
-                <div class="flex-1">
+                </div>`;
+            }
+
+            // --- FIX 3: USE THE VARIABLE INSIDE THE HTML ---
+            card.innerHTML = `
+                ${profileHtml}  <div class="flex-1">
                     <h3 class="font-bold text-[#004d40] text-lg leading-tight">${data.name}</h3>
                     <p class="text-xs font-bold text-[#009688] uppercase tracking-wide mb-1">${data.role}</p>
                     <div class="flex items-center gap-3 text-xs text-gray-400">
