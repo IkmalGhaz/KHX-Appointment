@@ -281,18 +281,55 @@ function renderTimeSlots() {
     const slots = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
     container.innerHTML = '';
     
+    // --- 1. GET CURRENT TIME INFO ---
+    const now = new Date();
+    const currentHour = now.getHours(); // Returns 0-23 (e.g., 14 for 2pm)
+
+    // --- 2. CHECK IF SELECTED DATE IS TODAY ---
+    // We create a Date object from the string (e.g., "14 January 2026")
+    const selectedDate = new Date(bookingData.date);
+    
+    const isToday = selectedDate.getDate() === now.getDate() &&
+                    selectedDate.getMonth() === now.getMonth() &&
+                    selectedDate.getFullYear() === now.getFullYear();
+
     slots.forEach(time => {
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = "bg-white border border-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-[#009688] hover:text-white transition-all";
-        btn.innerText = time;
-        btn.onclick = (e) => {
-            e.preventDefault(); 
-            Array.from(container.children).forEach(c => c.classList.remove('bg-[#009688]', 'text-white'));
-            btn.classList.add('bg-[#009688]', 'text-white');
-            bookingData.time = time;
-            setTimeout(() => setupPaymentScreen(), 200); 
-        };
+        
+        // --- 3. CHECK IF TIME SLOT IS IN THE PAST ---
+        const slotHour = parseInt(time.substring(0, 2)); // Get "09" from "09:00" -> 9
+        
+        // Logic: If it is today AND the slot is earlier or equal to current hour
+        // (e.g. if now is 14:00/2pm, then 14:00 and earlier are disabled)
+        let isExpired = isToday && (slotHour <= currentHour);
+
+        if (isExpired) {
+            // --- OPTION A: SHOW AS DISABLED (Greyed out) ---
+            btn.className = "bg-gray-50 border border-gray-100 text-gray-300 py-3 rounded-xl font-bold cursor-not-allowed";
+            btn.innerText = time;
+            btn.disabled = true; // Prevent clicking
+        } else {
+            // --- OPTION B: SHOW AS ACTIVE ---
+            btn.className = "bg-white border border-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-[#009688] hover:text-white transition-all shadow-sm";
+            btn.innerText = time;
+            
+            btn.onclick = (e) => {
+                e.preventDefault(); 
+                // Reset other buttons
+                Array.from(container.children).forEach(c => {
+                    if (!c.disabled) { // Only reset active buttons
+                         c.className = "bg-white border border-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-[#009688] hover:text-white transition-all shadow-sm";
+                    }
+                });
+                // Highlight this button
+                btn.className = "bg-[#009688] border border-[#009688] text-white py-3 rounded-xl font-bold shadow-md transform scale-105 transition-all";
+                
+                bookingData.time = time;
+                setTimeout(() => setupPaymentScreen(), 200); 
+            };
+        }
+        
         container.appendChild(btn);
     });
 }
