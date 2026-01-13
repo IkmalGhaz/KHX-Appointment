@@ -136,9 +136,75 @@ document.getElementById('profile-logout-btn').onclick = async () => {
     }
 };
 
+// --- ANALYTICS CHARTS LOGIC ---
+function initAnalyticsCharts() {
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { x: { grid: { display: false } }, y: { grid: { display: false }, beginAtZero: true } }
+    };
+
+    // 1. Top Doctors (Horizontal Bar)
+    new Chart(document.getElementById('topDoctorsChart'), {
+        type: 'bar',
+        data: {
+            labels: ['Dr. Sarah', 'Dr. Michael', 'Dr. Ali', 'Dr. Emma'],
+            datasets: [{
+                data: [45, 38, 32, 25],
+                backgroundColor: ['#009688', '#4DB6AC', '#80CBC4', '#B2DFDB'],
+                borderRadius: 8
+            }]
+        },
+        options: { ...chartOptions, indexAxis: 'y' }
+    });
+
+    // 2. Age Analysis (Doughnut)
+    new Chart(document.getElementById('ageAnalysisChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['18-25', '26-40', '41-60', '60+'],
+            datasets: [{
+                data: [30, 45, 15, 10],
+                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            ...chartOptions,
+            cutout: '70%',
+            plugins: { legend: { display: true, position: 'right' } }
+        }
+    });
+
+    // 3. Top Services (Vertical Bar)
+    new Chart(document.getElementById('servicesChart'), {
+        type: 'bar',
+        data: {
+            labels: ['Dental', 'Consult', 'Scan', 'Surgery'],
+            datasets: [{
+                data: [65, 50, 80, 40],
+                backgroundColor: '#6200EE',
+                borderRadius: 8
+            }]
+        },
+        options: chartOptions
+    });
+}
+
+// --- MAIN AUTH OBSERVER ---
 onAuthStateChanged(auth, async (user) => {
     if (user) {
+        // 1. Load User Profile
         await populateProfile(user.uid);
+
+        // 2. Initialize Charts
+        initAnalyticsCharts();
+
+        // 3. Refresh Lucide Icons
         if (window.lucide) window.lucide.createIcons();
+    } else {
+        // Redirect to login if not authenticated
+        window.location.href = "index.html";
     }
 });
