@@ -31,6 +31,7 @@ let bookingData = {
 };
 let blockedDates = [];
 let bookedTimes = [];
+let allServices = [];
 
 // --- 1. NAVIGATION LOGIC ---
 window.handleBack = () => {
@@ -71,58 +72,81 @@ async function loadServices() {
     try {
         const q = query(collection(db, "Services"));
         const snapshot = await getDocs(q);
-        container.innerHTML = '';
+        allServices = []; // Clear existing
 
-        let services = [];
         if (snapshot.empty) {
-            services = [
+            allServices = [
                 { id: "s1", specialization: "General Consultation", price: 150, duration: 30, desc: "General check-up." },
                 { id: "s2", specialization: "OB-GYN Consultation", price: 250, duration: 45, desc: "Women's health." }
             ];
         } else {
-            snapshot.forEach(doc => services.push({ id: doc.id, ...doc.data() }));
+            snapshot.forEach(doc => allServices.push({ id: doc.id, ...doc.data() })); //
         }
 
-        services.forEach(data => {
-            const card = document.createElement('div');
-            card.className = "bg-white p-4 rounded-2xl cursor-pointer border border-transparent hover:border-[#009688] transition-all shadow-sm mb-3 group";
-
-            // Fix: Fetch description correctly from database
-            const serviceDescription = data.desc || data.description || "No description available.";
-
-            card.innerHTML = `
-                <div class="flex items-start gap-4">
-                    <div class="w-12 h-12 rounded-2xl bg-[#e0f2f1] flex items-center justify-center text-[#009688] shrink-0">
-                        <i data-lucide="heart" class="w-6 h-6 fill-current"></i>
-                    </div>
-                    <div class="flex-1">
-                        <h3 class="font-bold text-[#004d40] text-lg leading-tight mb-1">${data.specialization || "Service"}</h3>
-                        <p class="text-xs text-gray-500 leading-relaxed mb-3">${serviceDescription}</p>
-                        <div class="flex items-center gap-4">
-                            <span class="font-bold text-[#009688]">RM ${data.price}</span>
-                            <div class="flex items-center gap-1 text-gray-400 text-xs">
-                                <i data-lucide="clock" class="w-3 h-3"></i>
-                                <span>${data.duration || 30} min</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            card.addEventListener('click', () => {
-                bookingData.serviceId = data.id;
-                bookingData.serviceName = data.specialization;
-                bookingData.price = data.price;
-                loadDoctors();
-                showStep(2);
-            });
-            container.appendChild(card);
-        });
-        if (window.lucide) window.lucide.createIcons();
+        renderServices(allServices); // Call a separate render function
     } catch (e) {
         console.error(e);
         container.innerHTML = `<p class="text-red-500 text-center">Failed to load services.</p>`;
     }
+}
+
+// New Render Function
+function renderServices(servicesToDisplay) {
+    const container = document.getElementById('service-list');
+    container.innerHTML = '';
+
+    if (servicesToDisplay.length === 0) {
+        container.innerHTML = `<p class="text-center text-gray-400 py-8 italic">No services found.</p>`;
+        return;
+    }
+
+    servicesToDisplay.forEach(data => {
+        const card = document.createElement('div');
+        card.className = "bg-white p-4 rounded-2xl cursor-pointer border border-transparent hover:border-[#009688] transition-all shadow-sm mb-3 group";
+
+        const serviceDescription = data.desc || data.description || "No description available.";
+
+        card.innerHTML = `
+            <div class="flex items-start gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-[#e0f2f1] flex items-center justify-center text-[#009688] shrink-0">
+                    <i data-lucide="heart" class="w-6 h-6 fill-current"></i>
+                </div>
+                <div class="flex-1">
+                    <h3 class="font-bold text-[#004d40] text-lg leading-tight mb-1">${data.specialization || "Service"}</h3>
+                    <p class="text-xs text-gray-500 leading-relaxed mb-3">${serviceDescription}</p>
+                    <div class="flex items-center gap-4">
+                        <span class="font-bold text-[#009688]">RM ${data.price}</span>
+                        <div class="flex items-center gap-1 text-gray-400 text-xs">
+                            <i data-lucide="clock" class="w-3 h-3"></i>
+                            <span>${data.duration || 30} min</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        card.addEventListener('click', () => {
+            bookingData.serviceId = data.id;
+            bookingData.serviceName = data.specialization;
+            bookingData.price = data.price;
+            loadDoctors();
+            showStep(2);
+        });
+        container.appendChild(card);
+    });
+    if (window.lucide) window.lucide.createIcons();
+}
+
+// Event Listener for Search Input
+const searchInput = document.getElementById('service-search');
+if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        const filtered = allServices.filter(s =>
+            (s.specialization && s.specialization.toLowerCase().includes(term))
+        );
+        renderServices(filtered); //
+    });
 }
 
 // --- 3. LOAD DOCTORS ---

@@ -502,7 +502,7 @@ async function loadAnalyticalReport() {
 
         // 2. Define Calendar Boundaries
         const now = new Date();
-
+        
         // --- CALENDAR WEEK (Monday to Sunday) ---
         const currentDay = now.getDay(); // 0 (Sun) to 6 (Sat)
         const diffToMon = now.getDate() - currentDay + (currentDay === 0 ? -6 : 1);
@@ -519,8 +519,8 @@ async function loadAnalyticalReport() {
 
         // 3. Fetch Bookings
         const bookingsSnap = await getDocs(collection(db, "bookings"));
-        let weeklyVisits = 0;
-        let monthlyVisits = 0;
+        let weeklyVisits = 0; 
+        let monthlyVisits = 0; 
         let doctorCounts = {};
 
         bookingsSnap.forEach(doc => {
@@ -531,7 +531,7 @@ async function loadAnalyticalReport() {
 
             // Only count confirmed/active statuses
             if (data.status === "Completed" || data.status === "Upcoming" || data.status === "Pending Approval") {
-
+                
                 // Catch Weekly: If date falls between this Mon and this Sun
                 if (appointmentDate >= monStart && appointmentDate <= sunEnd) {
                     weeklyVisits++;
@@ -556,8 +556,8 @@ async function loadAnalyticalReport() {
 
         renderCharts(ageGroups, doctorCounts);
 
-    } catch (error) {
-        console.error("Analytical Report Error:", error);
+    } catch (error) { 
+        console.error("Analytical Report Error:", error); 
     }
 }
 
