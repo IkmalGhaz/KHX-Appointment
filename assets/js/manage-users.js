@@ -1,4 +1,4 @@
-import { db, collection, getDocs, doc, updateDoc, deleteDoc, addDoc } from './firebase-config.js';
+import { db, collection, getDocs, doc, updateDoc, deleteDoc, addDoc, auth, signOut } from './firebase-config.js';
 
 // --- State Management ---
 let allPatients = [];
@@ -187,6 +187,22 @@ window.deleteUser = async (id) => {
             alert("Error deleting user.");
         }
     }
+}
+
+// --- 6. Logout Logic ---
+const logoutBtn = document.getElementById('logout-btn');
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+        if (confirm("Are you sure you want to logout?")) {
+            try {
+                await signOut(auth);
+                window.location.href = "index.html";
+            } catch (error) {
+                console.error("Logout Error:", error);
+                alert("Failed to logout. Please try again.");
+            }
+        }
+    });
 }
 
 // --- Event Listeners ---
