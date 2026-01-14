@@ -414,23 +414,82 @@ if (profileLogoutBtn) {
     };
 }
 
+// ============================================
+// NEW: CANCELLATION NOTIFICATION LOGIC
+// ============================================
 
-// --- AUTH OBSERVER ---
+window.closeCancelNotification = () => {
+    document.getElementById('cancel-notification-modal').classList.add('hidden');
+};
+
+async function checkCancelledAppointments(patientId) {
+    try {
+        const q = query(collection(db, "bookings"), where("patientId", "==", patientId));
+        const querySnapshot = await getDocs(q);
+
+        querySnapshot.forEach((doc) => {
+            const booking = doc.data();
+            const bookingId = doc.id;
+
+            if (booking.status === 'Cancelled') {
+                const storageKey = 'seen_cancellation_' + bookingId;
+                const hasSeen = localStorage.getItem(storageKey);
+
+                if (!hasSeen) {
+                    const docName = booking.doctorName || "The Doctor";
+                    const serviceName = booking.serviceName || "Appointment";
+                    const date = booking.date || "";
+
+                    const msgElement = document.getElementById('cancel-msg-body');
+                    if (msgElement) {
+                        msgElement.innerHTML = `
+                        We are really sorry, but <span class="font-bold text-gray-900">${docName}</span> 
+                        had to cancel your <span class="font-bold">${serviceName}</span> 
+                        on ${date}.
+                    `;
+                    }
+
+                    const waMsg = `Hi Admin, my appointment (ID: ${bookingId}) with ${docName} was cancelled. I would like to request a refund.`;
+                    const waLink = `https://wa.me/60194116487?text=${encodeURIComponent(waMsg)}`;
+                    const linkBtn = document.getElementById('whatsapp-refund-link');
+                    if (linkBtn) linkBtn.href = waLink;
+
+                    const modal = document.getElementById('cancel-notification-modal');
+                    if (modal) modal.classList.remove('hidden');
+                    
+                    if (window.lucide) window.lucide.createIcons();
+
+                    localStorage.setItem(storageKey, 'true');
+                }
+            }
+        });
+    } catch (error) {
+        console.error("Error checking cancellations:", error);
+    }
+}
+
+// ============================================
+// AUTH OBSERVER (Triggers everything)
+// ============================================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         // Ensure dashboard content is visible immediately
         const dashboardContent = document.querySelector('.flex-1');
         if (dashboardContent) dashboardContent.classList.remove('hidden');
 
+        // 
+        // Initialize Listeners
         setupProfileListener(user.uid);
         setupStatsListeners(user.uid);
         setupDependentsListener(user.uid);
 
+        // Run Checks
         await loadAnalyticalReport();
+        await checkCancelledAppointments(user.uid); // <--- ADDED HERE
+
         if (typeof window.loadAppointments === 'function') window.loadAppointments(user.uid);
-        lucide.createIcons();
+        if (window.lucide) window.lucide.createIcons();
     } else {
         window.location.href = "index.html";
     }
 });
-

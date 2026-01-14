@@ -141,6 +141,43 @@
 <body class="flex items-center justify-center min-h-screen">
     <div class="mobile-frame">
 
+        <div id="cancel-notification-modal" class="absolute inset-0 z-[200] hidden flex items-center justify-center px-6 bg-black/60 backdrop-blur-sm">
+    <div class="bg-white rounded-[2rem] p-6 w-full max-w-sm shadow-2xl animate-slide-up border border-red-100">
+        
+        <div class="flex justify-center mb-5">
+            <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center border-4 border-red-100 animate-bounce">
+                <i data-lucide="alert-triangle" class="w-8 h-8 text-red-500"></i>
+            </div>
+        </div>
+
+        <div class="text-center space-y-3 mb-6">
+            <h3 class="text-xl font-bold text-gray-800">Appointment Cancelled</h3>
+            <div class="text-sm text-gray-600 leading-relaxed space-y-2">
+                <p id="cancel-msg-body">
+                    </p>
+                <p class="text-xs bg-red-50 text-red-600 p-3 rounded-xl border border-red-100 font-semibold">
+                    Reason: Emergency / Unforeseen Circumstances
+                </p>
+            </div>
+        </div>
+
+        <div class="space-y-3">
+            <a id="whatsapp-refund-link" 
+               href="#" 
+               target="_blank"
+               class="flex items-center justify-center gap-2 w-full py-4 bg-[#25D366] text-white font-bold rounded-2xl shadow-lg hover:shadow-xl active:scale-95 transition-all">
+                <i data-lucide="message-circle" class="w-5 h-5"></i>
+                Contact for Refund
+            </a>
+
+            <button onclick="closeCancelNotification()" 
+                class="w-full py-4 bg-gray-100 text-gray-700 font-bold rounded-2xl hover:bg-gray-200 active:scale-95 transition-all">
+                Close & Dismiss
+            </button>
+        </div>
+    </div>
+</div>
+
         <div id="profile-view-modal" class="absolute inset-0 bg-white z-[100] hidden flex flex-col animate-full-modal">
             <div class="px-6 pt-12 pb-4 flex justify-between items-center border-b border-gray-50">
                 <h2 class="text-xl font-bold text-gray-900">Personal Information</h2>
