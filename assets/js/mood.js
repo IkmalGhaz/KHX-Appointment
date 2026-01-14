@@ -26,7 +26,7 @@ saveBtn.onclick = async () => {
     saveBtn.disabled = true;
     try {
         await addDoc(collection(db, "MoodTracker"), {
-            userId: auth.currentUser.uid,
+            patientId: auth.currentUser.uid,
             moodScore: parseInt(slider.value),
             createdAt: new Date()
         });

@@ -15,7 +15,7 @@ saveBtn.onclick = async () => {
 
     try {
         await addDoc(collection(db, "HealthTracker"), {
-            userId: auth.currentUser.uid,
+            patientId: auth.currentUser.uid,
             height: h,
             weight: w,
             createdAt: new Date()

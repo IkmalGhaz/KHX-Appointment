@@ -68,7 +68,7 @@ function setupProfileListener(uid) {
 
 // --- LIVE STATS SYNC ---
 function setupStatsListeners(uid) {
-    const healthQ = query(collection(db, "HealthTracker"), where("userId", "==", uid));
+    const healthQ = query(collection(db, "HealthTracker"), where("patientId", "==", uid));
     onSnapshot(healthQ, (snapshot) => {
         if (!snapshot.empty) {
             const sortedDocs = snapshot.docs.sort((a, b) => b.data().createdAt - a.data().createdAt);
@@ -80,7 +80,7 @@ function setupStatsListeners(uid) {
 
     // Inside setupStatsListeners(uid) function:
 
-    const moodQ = query(collection(db, "MoodTracker"), where("userId", "==", uid));
+    const moodQ = query(collection(db, "MoodTracker"), where("patientId", "==", uid));
     onSnapshot(moodQ, (snapshot) => {
         if (!snapshot.empty) {
             // Sort to get the latest entry
