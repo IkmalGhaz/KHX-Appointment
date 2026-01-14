@@ -34,7 +34,7 @@ async function loadAppointments(doctorId) {
         const promises = snapshot.docs.map(async (bookingDoc) => {
             const data = bookingDoc.data();
             let patientName = "Unknown Patient";
-            
+
             if (data.patientId) {
                 try {
                     const patientSnap = await getDoc(doc(db, "Users", data.patientId));
@@ -52,10 +52,10 @@ async function loadAppointments(doctorId) {
         });
 
         allAppointments = await Promise.all(promises);
-        
+
         // 3. IMPORTANT: Sort by Date so months stay together
         allAppointments.sort((a, b) => new Date(a.date) - new Date(b.date));
-        
+
         renderList(allAppointments);
 
     } catch (error) {
@@ -68,12 +68,12 @@ async function loadAppointments(doctorId) {
 function renderList(data) {
     aptList.innerHTML = '';
 
-    const active = data.filter(apt => 
-        apt.status !== 'Cancelled' && 
+    const active = data.filter(apt =>
+        apt.status !== 'Cancelled' &&
         (
-            apt.status === 'Upcoming' || 
-            apt.status === 'Pending Approval' || 
-            apt.status === 'Pending' || 
+            apt.status === 'Upcoming' ||
+            apt.status === 'Pending Approval' ||
+            apt.status === 'Pending' ||
             apt.paymentStatus === 'Paid'
         )
     );
@@ -84,7 +84,7 @@ function renderList(data) {
     }
 
     // --- TRACKER FOR MONTH GROUPING ---
-    let lastMonthYear = ""; 
+    let lastMonthYear = "";
 
     active.forEach(apt => {
         // --- A. Extract Date Info ---
@@ -94,10 +94,10 @@ function renderList(data) {
 
         if (apt.date) {
             // Assumes apt.date format is "15 January 2026"
-            const parts = apt.date.split(' '); 
+            const parts = apt.date.split(' ');
             if (parts.length >= 3) {
-                displayDay = parts[0]; 
-                displayMonth = parts[1].substring(0, 3).toUpperCase(); 
+                displayDay = parts[0];
+                displayMonth = parts[1].substring(0, 3).toUpperCase();
                 fullMonthYear = `${parts[1]} ${parts[2]}`; // e.g. "January 2026"
             }
         }
@@ -112,7 +112,7 @@ function renderList(data) {
                 <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest">${fullMonthYear}</h2>
             `;
             aptList.appendChild(header);
-            
+
             // Update tracker
             lastMonthYear = fullMonthYear;
         }
@@ -122,7 +122,7 @@ function renderList(data) {
 
         const card = document.createElement('div');
         card.className = "bg-white p-4 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4 transition-all hover:shadow-md mb-3";
-        
+
         card.innerHTML = `
             <div class="w-16 h-16 rounded-2xl bg-[#e0f2f1] flex flex-col items-center justify-center text-[#009688] shrink-0 shadow-sm">
                 <span class="text-xl font-bold leading-none">${displayDay}</span>
@@ -145,17 +145,17 @@ function renderList(data) {
                         <span>${formattedTime}</span>
                     </div>
                     
-                    ${apt.status ? 
-                        `<span class="text-[10px] font-bold px-2 py-1 rounded bg-blue-50 text-blue-600 border border-blue-100 uppercase">${apt.status}</span>` 
-                        : ''}
+                    ${apt.status ?
+                `<span class="text-[10px] font-bold px-2 py-1 rounded bg-blue-50 text-blue-600 border border-blue-100 uppercase">${apt.status}</span>`
+                : ''}
                 </div>
             </div>
         `;
-        
+
         aptList.appendChild(card);
     });
-    
-    if(window.lucide) window.lucide.createIcons();
+
+    if (window.lucide) window.lucide.createIcons();
 }
 
 // --- 4. Helpers & Search ---
@@ -167,27 +167,27 @@ function renderEmptyState(debugInfo = "") {
             <p class="text-[10px] text-gray-400 mt-2 font-mono">${debugInfo}</p>
         </div>
     `;
-    if(window.lucide) window.lucide.createIcons();
+    if (window.lucide) window.lucide.createIcons();
 }
 
 searchInput.addEventListener('input', (e) => {
     const term = e.target.value.toLowerCase();
-    const filtered = allAppointments.filter(apt => 
-        (apt.patientName && apt.patientName.toLowerCase().includes(term)) || 
+    const filtered = allAppointments.filter(apt =>
+        (apt.patientName && apt.patientName.toLowerCase().includes(term)) ||
         (apt.serviceName && apt.serviceName.toLowerCase().includes(term))
     );
     renderList(filtered);
 });
 
 function formatTimeOnly(timeString) {
-    if(!timeString) return "--:--";
+    if (!timeString) return "--:--";
     try {
         const [hrs, mins] = timeString.split(':');
         let h = parseInt(hrs);
         const ampm = h >= 12 ? 'PM' : 'AM';
         const h12 = h % 12 || 12;
         return `${h12}:${mins} ${ampm}`;
-    } catch(e) { return timeString; }
+    } catch (e) { return timeString; }
 }
 
 // --- 5. Action Sheet Logic ---
@@ -205,7 +205,7 @@ document.getElementById('btn-complete').onclick = () => updateStatus('Completed'
 document.getElementById('btn-cancel').onclick = () => updateStatus('Cancelled');
 
 async function updateStatus(status) {
-    if(!selectedAptId) return;
+    if (!selectedAptId) return;
     try {
         const btnId = status === 'Completed' ? 'btn-complete' : 'btn-cancel';
         const btn = document.getElementById(btnId);
@@ -213,15 +213,15 @@ async function updateStatus(status) {
         btn.innerText = "Updating...";
 
         await updateDoc(doc(db, "bookings", selectedAptId), { status: status });
-        
+
         const idx = allAppointments.findIndex(a => a.id === selectedAptId);
-        if(idx > -1) allAppointments[idx].status = status;
-        
+        if (idx > -1) allAppointments[idx].status = status;
+
         closeActionSheet();
-        renderList(allAppointments); 
-        
+        renderList(allAppointments);
+
         btn.innerText = originalText;
-    } catch(e) {
+    } catch (e) {
         alert("Update failed: " + e.message);
     }
 }

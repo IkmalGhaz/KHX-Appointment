@@ -43,12 +43,12 @@ window.rebookAppointment = (serviceName, price, doctorId, doctorName) => {
 // --- CANCELLATION MODAL LOGIC ---
 window.cancelBooking = (id) => {
     appointmentToCancel = id;
-    if(reasonInput) reasonInput.value = '';
-    if(cancelModal) cancelModal.classList.remove('hidden');
+    if (reasonInput) reasonInput.value = '';
+    if (cancelModal) cancelModal.classList.remove('hidden');
 };
 
 window.closeCancelModal = () => {
-    if(cancelModal) cancelModal.classList.add('hidden');
+    if (cancelModal) cancelModal.classList.add('hidden');
     appointmentToCancel = null;
 };
 
@@ -115,9 +115,9 @@ window.switchTab = (tab) => {
 };
 
 window.loadAppointments = (uid) => {
-    if(!aptList) return;
+    if (!aptList) return;
     aptList.innerHTML = '<div class="text-center py-10"><div class="animate-spin inline-block w-6 h-6 border-2 border-[#009688] border-t-transparent rounded-full"></div></div>';
-    
+
     const q = query(collection(db, "bookings"), where("patientId", "==", uid));
 
     onSnapshot(q, (snapshot) => {
@@ -171,11 +171,11 @@ function renderList(list) {
 
     aptList.innerHTML = list.map(apt => {
         const hasPassed = isTimePassed(apt.date, apt.time);
-        
+
         // If it's in the Past tab but status wasn't officially changed to Completed/Cancelled, show "Expired" or similar
         let displayStatus = apt.status;
         if (hasPassed && apt.status !== 'Completed' && apt.status !== 'Cancelled') {
-            displayStatus = 'Expired'; 
+            displayStatus = 'Expired';
         }
 
         return `
@@ -215,13 +215,13 @@ function renderList(list) {
             </div>
         </div>
     `}).join('');
-    
+
     if (window.lucide) window.lucide.createIcons();
 }
 
 function getStatusStyle(status, hasPassed) {
     const s = status.toLowerCase();
-    
+
     // If it has physically passed but is not cancelled/completed, give it a gray "Expired" look
     if (hasPassed && s !== 'completed' && s !== 'cancelled') {
         return 'bg-gray-100 text-gray-500 border border-gray-200';
@@ -231,3 +231,5 @@ function getStatusStyle(status, hasPassed) {
     if (s === 'cancelled') return 'bg-red-100 text-red-700 border border-red-200';
     return 'bg-slate-800 text-white border border-slate-900';
 }
+
+viewappointment.js
