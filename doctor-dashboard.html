@@ -407,81 +407,167 @@
             } catch (e) { console.error("Error loading doctor:", e); }
         }
 
-        // --- ANALYTICS ---
-        function calculateAge(dobString) {
-            if (!dobString) return null;
-            let parts = dobString.includes('/') ? dobString.split('/').map(Number) : dobString.split('-').map(Number);
-            const birthDate = parts.length === 3 ? new Date(parts[0], parts[1] - 1, parts[2]) : new Date(dobString);
-            return new Date().getFullYear() - birthDate.getFullYear();
-        }
+        // --- ANALYTICS HELPERS ---
+            function calculateAge(dobString) {
+                if (!dobString) return 0;
+                // Handle both DD/MM/YYYY and YYYY-MM-DD
+                let parts = dobString.includes('/') ? dobString.split('/').reverse().map(Number) : dobString.split('-').map(Number);
+                const birthDate = parts.length === 3 ? new Date(parts[0], parts[1] - 1, parts[2]) : new Date(dobString);
+                const today = new Date();
+                let age = today.getFullYear() - birthDate.getFullYear();
+                const m = today.getMonth() - birthDate.getMonth();
+                if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+                return age >= 0 ? age : 0;
+            }
 
-        async function loadAnalyticalReport() {
-            try {
-                const [usersSnap, bookingsSnap] = await Promise.all([
-                    getDocs(collection(db, "Users")),
-                    getDocs(collection(db, "bookings"))
-                ]);
+            function parseFriendlyDateToObj(dateStr) {
+                if (!dateStr) return null;
+                const parts = dateStr.split(' ');
+                if (parts.length !== 3) return null;
 
-                let ageGroups = { '18-25': 0, '26-40': 0, '41-60': 0, '60+': 0 };
-                usersSnap.forEach(doc => {
-                    const data = doc.data();
-                    if (data.role === "Patient" && data.dateOfBirth) {
-                        const age = calculateAge(data.dateOfBirth);
-                        if (age >= 18 && age <= 25) ageGroups['18-25']++;
-                        else if (age >= 26 && age <= 40) ageGroups['26-40']++;
-                        else if (age >= 41 && age <= 60) ageGroups['41-60']++;
-                        else if (age > 60) ageGroups['60+']++;
-                    }
-                });
+                const day = parseInt(parts[0]);
+                const monthName = parts[1];
+                const year = parseInt(parts[2]);
 
-                let weekly = 0, monthly = 0, serviceCounts = {};
-                const now = new Date();
-                const oneWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                const oneMonth = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+                const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                const monthIndex = monthNames.indexOf(monthName);
 
-                bookingsSnap.forEach(doc => {
-                    const data = doc.data();
-                    const created = data.createdAt?.seconds ? new Date(data.createdAt.seconds * 1000) : new Date(data.createdAt);
-                    if (data.status !== "Cancelled") {
-                        if (created >= oneWeek) weekly++;
-                        if (created >= oneMonth) monthly++;
-                        if (data.serviceName) serviceCounts[data.serviceName] = (serviceCounts[data.serviceName] || 0) + 1;
-                    }
-                });
+                if (monthIndex === -1) return null;
+                return new Date(year, monthIndex, day);
+            }
 
-                document.getElementById('weekly-count').innerText = weekly;
-                document.getElementById('monthly-count').innerText = monthly;
-                renderCharts(ageGroups, serviceCounts);
-            } catch (e) { console.error("Analytics Error:", e); }
-        }
+            // --- MAIN ANALYTICS LOGIC ---
+            async function loadAnalyticalReport() {
+                try {
+                    // 1. Fetch Users for Age Analysis
+                    const usersSnap = await getDocs(collection(db, "Users"));
+                    let ageGroups = { '18-25': 0, '26-40': 0, '41-60': 0, '60+': 0 };
 
-        function renderCharts(ageData, serviceData) {
-            new Chart(document.getElementById('ageAnalysisChart'), {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(ageData),
-                    datasets: [{ data: Object.values(ageData), backgroundColor: ['#009688', '#26a69a', '#4db6ac', '#80cbc4'], borderWidth: 0 }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false, cutout: '75%',
-                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } }
+                    usersSnap.forEach(doc => {
+                        const data = doc.data();
+                        if (data.role === "Patient" && data.dateOfBirth) {
+                            const age = calculateAge(data.dateOfBirth);
+                            if (age >= 18 && age <= 25) ageGroups['18-25']++;
+                            else if (age >= 26 && age <= 40) ageGroups['26-40']++;
+                            else if (age >= 41 && age <= 60) ageGroups['41-60']++;
+                            else if (age > 60) ageGroups['60+']++;
+                        }
+                    });
+
+                    // 2. Define Calendar Boundaries
+                    const now = new Date();
+
+                    // CALENDAR WEEK (Monday to Sunday)
+                    const currentDay = now.getDay();
+                    const diffToMon = now.getDate() - currentDay + (currentDay === 0 ? -6 : 1);
+                    const monStart = new Date(new Date().setDate(diffToMon));
+                    monStart.setHours(0, 0, 0, 0);
+
+                    const sunEnd = new Date(monStart);
+                    sunEnd.setDate(monStart.getDate() + 6);
+                    sunEnd.setHours(23, 59, 59, 999);
+
+                    // CALENDAR MONTH
+                    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+                    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+                    // 3. Fetch Bookings for Visits and Services
+                    const bookingsSnap = await getDocs(collection(db, "bookings"));
+                    let weeklyVisits = 0;
+                    let monthlyVisits = 0;
+                    let serviceCounts = {};
+
+                    bookingsSnap.forEach(doc => {
+                        const data = doc.data();
+                        const appointmentDate = parseFriendlyDateToObj(data.date);
+
+                        if (!appointmentDate) return;
+
+                        // Only count active/completed statuses
+                        if (data.status === "Completed" || data.status === "Upcoming" || data.status === "Pending Approval") {
+
+                            // Weekly Count
+                            if (appointmentDate >= monStart && appointmentDate <= sunEnd) {
+                                weeklyVisits++;
+                            }
+
+                            // Monthly Count
+                            if (appointmentDate >= monthStart && appointmentDate <= monthEnd) {
+                                monthlyVisits++;
+                            }
+
+                            // Service Popularity (Top Services Chart)
+                            if (data.serviceName) {
+                                serviceCounts[data.serviceName] = (serviceCounts[data.serviceName] || 0) + 1;
+                            }
+                        }
+                    });
+
+                    // Update UI
+                    const weeklyCountEl = document.getElementById('weekly-count');
+                    const monthlyCountEl = document.getElementById('monthly-count');
+                    if (weeklyCountEl) weeklyCountEl.innerText = weeklyVisits;
+                    if (monthlyCountEl) monthlyCountEl.innerText = monthlyVisits;
+
+                    renderCharts(ageGroups, serviceCounts);
+
+                } catch (error) {
+                    console.error("Analytical Report Error:", error);
                 }
-            });
+            }
 
-            const sorted = Object.entries(serviceData).sort(([, a], [, b]) => b - a).slice(0, 4);
-            new Chart(document.getElementById('topServicesChart'), {
-                type: 'bar',
-                data: {
-                    labels: sorted.map(d => d[0]),
-                    datasets: [{ data: sorted.map(d => d[1]), backgroundColor: '#00796b', borderRadius: 8 }]
-                },
-                options: {
-                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { x: { display: false }, y: { grid: { display: false }, ticks: { font: { size: 10 } } } }
+            function renderCharts(ageData, serviceData) {
+                // Age Analysis Chart (Doughnut)
+                const ageCtx = document.getElementById('ageAnalysisChart');
+                if (ageCtx) {
+                    const existing = Chart.getChart(ageCtx); if (existing) existing.destroy();
+                    new Chart(ageCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: Object.keys(ageData),
+                            datasets: [{
+                                data: Object.values(ageData),
+                                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'],
+                                borderWidth: 0
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            cutout: '70%',
+                            plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } }
+                        }
+                    });
                 }
-            });
-        }
+
+                // Top Services Chart (Horizontal Bar)
+                const serviceCtx = document.getElementById('topServicesChart');
+                if (serviceCtx) {
+                    const sorted = Object.entries(serviceData).sort(([, a], [, b]) => b - a).slice(0, 4);
+                    const existing = Chart.getChart(serviceCtx); if (existing) existing.destroy();
+                    new Chart(serviceCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: sorted.map(d => d[0]),
+                            datasets: [{
+                                data: sorted.map(d => d[1]),
+                                backgroundColor: '#009688',
+                                borderRadius: 8
+                            }]
+                        },
+                        options: {
+                            indexAxis: 'y',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                x: { display: false },
+                                y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                            }
+                        }
+                    });
+                }
+            }
 
         setInterval(() => {
             document.getElementById('current-time').textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
