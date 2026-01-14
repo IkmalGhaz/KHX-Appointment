@@ -88,6 +88,20 @@
         .animate-full-modal {
             animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
         }
+
+        #dependents-container {
+            display: flex;
+            overflow-x: auto;
+            padding-left: 4px;
+            padding-right: 4px;
+        }
+
+        #dependents-container .scroll-item {
+            width: 140px;
+            height: 160px;
+            background: white;
+            flex-shrink: 0;
+        }
     </style>
 </head>
 
@@ -156,9 +170,8 @@
                         class="w-full bg-[#009688] text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all">Edit
                         Profile</button>
                     <button id="profile-logout-btn"
-                        class="w-full py-4 bg-red-50 text-red-600 font-bold rounded-2xl active:scale-95 transition-all">
-                        Logout Account
-                    </button>
+                        class="w-full py-4 bg-red-50 text-red-600 font-bold rounded-2xl active:scale-95 transition-all">Logout
+                        Account</button>
                 </div>
             </div>
         </div>
@@ -225,7 +238,6 @@
         <div class="flex-1 overflow-y-auto no-scrollbar px-6 -mt-10 pb-6 relative z-20 space-y-5">
             <div class="pt-4 px-1">
                 <div class="scroll-container no-scrollbar gap-4 pb-4">
-
                     <div class="scroll-item interactive-card bg-white p-5 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col items-center justify-center cursor-pointer"
                         onclick="window.location.href='health.html'">
                         <i data-lucide="activity" class="w-12 h-12 bg-blue-50 text-blue-500 p-3 rounded-full mb-3"></i>
@@ -300,6 +312,24 @@
                 </button>
             </div>
 
+            <div class="px-2 mt-6 bg-pink-50/50 py-6 rounded-[2.5rem] border border-pink-100">
+                <div class="flex items-center justify-between mb-4 px-4">
+                    <h3 class="text-sm font-black text-gray-800 flex items-center gap-2">
+                        <i data-lucide="baby" class="w-4 h-4 text-pink-500"></i> Quick Book for Kids
+                    </h3>
+                    <span
+                        class="text-[10px] font-bold text-pink-400 bg-white px-2 py-0.5 rounded-full border border-pink-100"
+                        id="child-count">0/5</span>
+                </div>
+                <div id="dependents-container" class="scroll-container no-scrollbar gap-4 pb-2">
+                    <button onclick="openAddChildModal()" id="add-child-trigger"
+                        class="scroll-item border-2 border-dashed border-pink-200 bg-white rounded-[2rem] flex flex-col items-center justify-center p-5 text-pink-400 active:scale-95 transition-all">
+                        <i data-lucide="plus-circle" class="w-8 h-8 mb-2"></i>
+                        <span class="text-[10px] font-bold uppercase">Add Child</span>
+                    </button>
+                </div>
+            </div>
+
             <div class="pt-4 space-y-6">
                 <div class="grid grid-cols-2 gap-4">
                     <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-5 rounded-[2rem] text-white shadow-md">
@@ -318,77 +348,128 @@
                     </h4>
                     <div class="h-[200px] w-full"><canvas id="ageAnalysisChart"></canvas></div>
                 </div>
-            </div>
-            <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
-                <h4 class="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <i data-lucide="award" class="w-4 h-4 text-teal-500"></i> Top Rated Specialists
-                </h4>
-                <div class="h-[200px] w-full">
-                    <canvas id="topDoctorsChart"></canvas>
+                <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
+                    <h4 class="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <i data-lucide="award" class="w-4 h-4 text-teal-500"></i> Top Rated Specialists
+                    </h4>
+                    <div class="h-[200px] w-full">
+                        <canvas id="topDoctorsChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
 
-    <div id="apt-modal" class="absolute inset-0 bg-white z-50 hidden flex flex-col animate-full-modal">
-        <div class="px-6 pt-12 pb-4 flex justify-between items-center border-b border-gray-50">
-            <h2 class="text-xl font-bold text-gray-900">My Appointments</h2>
-            <button id="close-modal" class="p-2 bg-gray-100 rounded-full"><i data-lucide="x" class="w-5 h-5"></i></button>
+        <div id="apt-modal" class="absolute inset-0 bg-white z-50 hidden flex flex-col animate-full-modal">
+            <div class="px-6 pt-12 pb-4 flex justify-between items-center border-b border-gray-50">
+                <h2 class="text-xl font-bold text-gray-900">My Appointments</h2>
+                <button id="close-modal" class="p-2 bg-gray-100 rounded-full"><i data-lucide="x"
+                        class="w-5 h-5"></i></button>
+            </div>
+            <div class="flex px-6 border-b border-gray-50 bg-gray-50/50">
+                <button onclick="switchTab('Upcoming')" id="tab-upcoming"
+                    class="tab-btn flex-1 py-4 text-xs font-black uppercase tracking-widest border-b-4 border-[#009688] text-[#009688]">Upcoming</button>
+                <button onclick="switchTab('Past')" id="tab-past"
+                    class="tab-btn flex-1 py-4 text-xs font-black uppercase tracking-widest border-b-4 border-transparent text-gray-400">Past</button>
+                <button onclick="switchTab('Cancelled')" id="tab-cancelled"
+                    class="tab-btn flex-1 py-4 text-xs font-black uppercase tracking-widest border-b-4 border-transparent text-gray-400">Cancelled</button>
+            </div>
+            <div id="appointments-list" class="flex-1 overflow-y-auto no-scrollbar p-6 bg-gray-50/30"></div>
         </div>
-    
-        <div class="flex px-6 border-b border-gray-50 bg-gray-50/50">
-            <button onclick="switchTab('Upcoming')" id="tab-upcoming"
-                class="tab-btn flex-1 py-4 text-xs font-black uppercase tracking-widest border-b-4 border-[#009688] text-[#009688]">Upcoming</button>
-            <button onclick="switchTab('Past')" id="tab-past"
-                class="tab-btn flex-1 py-4 text-xs font-black uppercase tracking-widest border-b-4 border-transparent text-gray-400">Past</button>
-            <button onclick="switchTab('Cancelled')" id="tab-cancelled"
-                class="tab-btn flex-1 py-4 text-xs font-black uppercase tracking-widest border-b-4 border-transparent text-gray-400">Cancelled</button>
-        </div>
-    
-        <div id="appointments-list" class="flex-1 overflow-y-auto no-scrollbar p-6 bg-gray-50/30"></div>
-    </div>
-    
-    <div id="cancel-confirm-modal"
-        class="absolute inset-0 z-[120] bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-6">
-        <div class="bg-white w-full rounded-3xl p-6 shadow-2xl">
-            <h3 class="text-lg font-bold text-gray-900 mb-2">Cancel Appointment?</h3>
-            <p class="text-sm text-gray-500 mb-4">Please let us know why you are cancelling.</p>
-            <textarea id="cancel-reason-input"
-                class="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 text-sm outline-none focus:ring-2 focus:ring-red-500 mb-4 resize-none"
-                rows="3" placeholder="Reason for cancellation..."></textarea>
-            <div class="flex gap-3">
-                <button onclick="closeCancelModal()" class="flex-1 py-3 font-bold text-gray-400">Back</button>
-                <button id="confirm-cancel-btn"
-                    class="flex-1 bg-red-500 text-white py-3 rounded-xl font-bold shadow-lg">Continue</button>
+
+        <div id="cancel-confirm-modal"
+            class="absolute inset-0 z-[120] bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-6">
+            <div class="bg-white w-full rounded-3xl p-6 shadow-2xl">
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Cancel Appointment?</h3>
+                <p class="text-sm text-gray-500 mb-4">Please let us know why you are cancelling.</p>
+                <textarea id="cancel-reason-input"
+                    class="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 text-sm outline-none focus:ring-2 focus:ring-red-500 mb-4 resize-none"
+                    rows="3" placeholder="Reason for cancellation..."></textarea>
+                <div class="flex gap-3">
+                    <button onclick="closeCancelModal()" class="flex-1 py-3 font-bold text-gray-400">Back</button>
+                    <button id="confirm-cancel-btn"
+                        class="flex-1 bg-red-500 text-white py-3 rounded-xl font-bold shadow-lg">Continue</button>
+                </div>
             </div>
         </div>
-    </div>
-    
-    <div id="booking-confirm-modal"
-        class="absolute inset-0 z-[130] bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-6">
-        <div class="bg-white w-full rounded-3xl p-8 text-center shadow-2xl">
-            <div class="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500">
-                <i data-lucide="alert-triangle" class="w-10 h-10"></i>
+
+        <div id="booking-confirm-modal"
+            class="absolute inset-0 z-[130] bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-6">
+            <div class="bg-white w-full rounded-3xl p-8 text-center shadow-2xl">
+                <div
+                    class="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500">
+                    <i data-lucide="alert-triangle" class="w-10 h-10"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Final Confirmation</h3>
+                <p class="text-sm text-gray-500 mb-8">Are you sure? This action cannot be undone.</p>
+                <button id="final-confirm-btn"
+                    class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold shadow-xl active:scale-95 transition-all mb-3">Yes,
+                    Confirm Now</button>
+                <button onclick="closeConfirmModal()" class="w-full py-2 text-gray-400 font-bold">Nevermind,
+                    stay</button>
             </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2">Final Confirmation</h3>
-            <p class="text-sm text-gray-500 mb-8">Are you sure? This action cannot be undone.</p>
-            <button id="final-confirm-btn"
-                class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold shadow-xl active:scale-95 transition-all mb-3">Yes,
-                Confirm Now</button>
-            <button onclick="closeConfirmModal()" class="w-full py-2 text-gray-400 font-bold">Nevermind, stay</button>
         </div>
-    </div>
-    
-    <div id="cancel-success-step" class="hidden fade-in text-center pt-20 px-6 bg-white absolute inset-0 z-[140]">
-        <div
-            class="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 text-red-600 animate-bounce">
-            <i data-lucide="trash-2" class="w-12 h-12"></i>
+
+        <div id="cancel-success-step" class="hidden fade-in text-center pt-20 px-6 bg-white absolute inset-0 z-[140]">
+            <div
+                class="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 text-red-600 animate-bounce">
+                <i data-lucide="trash-2" class="w-12 h-12"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Appointment Cancelled</h2>
+            <p class="text-gray-500 mb-8 px-4">Your appointment has been successfully removed from the schedule.</p>
+            <button onclick="window.location.reload()"
+                class="w-full bg-slate-900 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all">Back
+                to List</button>
         </div>
-        <h2 class="text-2xl font-bold text-gray-900 mb-2">Appointment Cancelled</h2>
-        <p class="text-gray-500 mb-8 px-4">Your appointment has been successfully removed from the schedule.</p>
-        <button onclick="window.location.reload()"
-            class="w-full bg-slate-900 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all">Back
-            to List</button>
-    </div>
+
+        <div id="add-child-modal"
+            class="absolute inset-0 bg-black/60 backdrop-blur-sm z-[150] hidden flex flex-col justify-end">
+            <div class="bg-white rounded-t-[2.5rem] h-[85%] flex flex-col animate-slide-up">
+                <div class="px-6 pt-8 pb-4 flex justify-between items-center border-b border-gray-50">
+                    <h2 class="text-xl font-bold text-gray-900">New Child Profile</h2>
+                    <button onclick="closeAddChildModal()" class="p-2 bg-gray-100 rounded-full"><i data-lucide="x"
+                            class="w-5 h-5"></i></button>
+                </div>
+                <form id="add-child-form" class="flex-1 overflow-y-auto no-scrollbar p-6 space-y-5">
+                    <div class="flex items-center gap-3 bg-pink-50 p-3 rounded-xl border border-pink-100 mb-2">
+                        <input type="checkbox" id="child-oku-status" class="w-5 h-5 accent-pink-500 rounded">
+                        <label for="child-oku-status" class="text-xs font-bold text-pink-600 uppercase">OKU Registered /
+                            Special Needs</label>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Full Name</label>
+                        <input type="text" id="child-name" required
+                            class="w-full bg-gray-50 border border-gray-100 rounded-xl p-3.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-pink-500">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Birth Date</label>
+                        <input type="date" id="child-dob" required
+                            class="w-full bg-gray-50 border border-gray-100 rounded-xl p-3.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-pink-500">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Disability Category</label>
+                        <select id="child-disability"
+                            class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-pink-500">
+                            <option value="General/Typical">General / Typical Child</option>
+                            <option value="Autism">Autism Spectrum</option>
+                            <option value="ADHD">ADHD</option>
+                            <option value="Down Syndrome">Down Syndrome</option>
+                            <option value="Dyslexia">Dyslexia</option>
+                            <option value="Learning Disability">Learning Disability (Generic)</option>
+                            <option value="Physical Disability">Physical Disability</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Special Instructions</label>
+                        <textarea id="child-notes" rows="3"
+                            placeholder="Sensory needs, triggers, or behavioral notes..."
+                            class="w-full bg-gray-50 border border-gray-100 rounded-xl p-3.5 text-sm font-semibold resize-none outline-none focus:ring-2 focus:ring-pink-500"></textarea>
+                    </div>
+                    <button type="submit"
+                        class="w-full bg-pink-500 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all mt-4">Save
+                        Child Profile</button>
+                </form>
+            </div>
+        </div>
 
         <div id="doctor-popup"
             class="absolute inset-0 bg-black/50 backdrop-blur-sm z-[150] hidden flex flex-col justify-end">

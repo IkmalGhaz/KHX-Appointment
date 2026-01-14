@@ -1,5 +1,5 @@
 import {
-    auth, db, storage, onAuthStateChanged, collection, query, where, onSnapshot, doc, updateDoc, signOut, ref, uploadBytes, getDownloadURL, getDocs
+    auth, db, storage, onAuthStateChanged, collection, query, where, onSnapshot, doc, updateDoc, signOut, ref, uploadBytes, getDownloadURL, getDocs, addDoc
 } from './firebase-config.js';
 
 // --- UI Elements ---
@@ -32,19 +32,15 @@ let currentUserDocId = null;
 
 // --- MODAL HANDLERS ---
 if (profileIconBtn) profileIconBtn.onclick = () => profileViewModal.classList.remove('hidden');
-
 window.closeViewProfile = () => profileViewModal.classList.add('hidden');
-
 window.closeEditProfile = () => {
     profileEditModal.classList.add('hidden');
     profileViewModal.classList.remove('hidden');
 };
-
 document.getElementById('open-edit-btn').onclick = () => {
     profileViewModal.classList.add('hidden');
     profileEditModal.classList.remove('hidden');
 };
-
 if (viewAptBtn) {
     viewAptBtn.onclick = () => {
         aptModal.classList.remove('hidden');
@@ -56,36 +52,27 @@ if (closeAptModalBtn) { closeAptModalBtn.onclick = () => aptModal.classList.add(
 // --- PROFILE REAL-TIME SYNC ---
 function setupProfileListener(uid) {
     const q = query(collection(db, "Users"), where("firebaseUid", "==", uid));
-
     onSnapshot(q, (snapshot) => {
         if (!snapshot.empty) {
             const userDoc = snapshot.docs[0];
             currentUserDocId = userDoc.id;
             const data = userDoc.data();
-
-            // 1. Update View Personal Info Modal
             if (viewFullNameHeader) viewFullNameHeader.innerText = data.fullName || "User Name";
             if (viewFullName) viewFullName.innerText = data.fullName || "--";
             if (viewPhone) viewPhone.innerText = data.phone || "--";
             if (viewEmail) viewEmail.innerText = data.email || "--";
             if (viewAddress) viewAddress.innerText = data.mailingAddress || "No address provided";
             if (data.profilePictureUrl && viewImg) viewImg.src = data.profilePictureUrl;
-
-            // 2. Pre-fill Edit Form
             if (editNameInput) editNameInput.value = data.fullName || "";
             if (editPhoneInput) editPhoneInput.value = data.phone || "";
             if (editAddressInput) editAddressInput.value = data.mailingAddress || "";
             if (data.profilePictureUrl && editImgPreview) editImgPreview.src = data.profilePictureUrl;
-
-            // 3. Calculate Membership Duration
             if (data.createdAt) {
                 const joinedDate = data.createdAt.seconds ? new Date(data.createdAt.seconds * 1000) : new Date(data.createdAt);
                 if (viewMemberSince) viewMemberSince.innerText = joinedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
                 const diffDays = Math.ceil(Math.abs(new Date() - joinedDate) / (1000 * 60 * 60 * 24));
                 if (viewDaysCount) viewDaysCount.innerText = `${diffDays} days with us`;
             }
-
-            // 4. Update Dashboard Greeting
             const dashUserName = document.getElementById('user-name');
             if (dashUserName) dashUserName.innerText = data.fullName || "Valued Patient";
         }
@@ -97,12 +84,10 @@ if (editForm) {
     editForm.onsubmit = async (e) => {
         e.preventDefault();
         if (!currentUserDocId) return alert("User data not loaded yet.");
-
         const saveBtn = document.getElementById('save-edit-btn');
         const originalText = saveBtn.innerText;
         saveBtn.innerText = "Updating...";
         saveBtn.disabled = true;
-
         try {
             const userRef = doc(db, "Users", currentUserDocId);
             await updateDoc(userRef, {
@@ -110,7 +95,6 @@ if (editForm) {
                 phone: editPhoneInput.value.trim(),
                 mailingAddress: editAddressInput.value.trim()
             });
-
             alert("Profile updated successfully!");
             closeEditProfile();
         } catch (error) {
@@ -125,7 +109,6 @@ if (editForm) {
 
 // --- LIVE STATS SYNC ---
 function setupStatsListeners(uid) {
-    // Health Tracker & Automatic BMI Calculation
     const healthQ = query(collection(db, "HealthTracker"), where("patientId", "==", uid));
     onSnapshot(healthQ, (snapshot) => {
         if (!snapshot.empty) {
@@ -133,14 +116,11 @@ function setupStatsListeners(uid) {
             const latest = sortedDocs[0].data();
             const heightCm = latest.height;
             const weightKg = latest.weight;
-
             document.getElementById('dash-height').innerText = `${heightCm} cm`;
             document.getElementById('dash-weight').innerText = `${weightKg} kg`;
-
             if (heightCm > 0 && weightKg > 0) {
                 const bmi = (weightKg / ((heightCm / 100) ** 2)).toFixed(1);
                 document.getElementById('dash-bmi-val').innerText = `BMI: ${bmi}`;
-
                 const bmiStatus = document.getElementById('dash-bmi-status');
                 if (bmi < 18.5) bmiStatus.innerText = "Underweight";
                 else if (bmi < 24.9) bmiStatus.innerText = "Normal";
@@ -149,20 +129,16 @@ function setupStatsListeners(uid) {
             }
         }
     });
-
-    // Mood Tracker & Ring Gradient Update
     const moodQ = query(collection(db, "MoodTracker"), where("patientId", "==", uid));
     onSnapshot(moodQ, (snapshot) => {
         if (!snapshot.empty) {
             const sortedDocs = snapshot.docs.sort((a, b) => b.data().createdAt - a.data().createdAt);
             const latest = sortedDocs[0].data();
             const val = latest.moodScore;
-
             document.getElementById('dash-mood-val').innerText = val + "%";
             const ringContainer = document.getElementById('dash-mood-ring-container');
-            const ringColor = val <= 50 ? "#facc15" : "#22c55e"; // Yellow for neutral/low, Green for happy
+            const ringColor = val <= 50 ? "#facc15" : "#22c55e";
             ringContainer.style.background = `conic-gradient(${ringColor} ${val}%, #f3f4f6 ${val}%)`;
-
             const statusText = document.getElementById('dash-mood-status');
             if (val <= 30) statusText.innerText = "Feeling Low";
             else if (val <= 60) statusText.innerText = "Neutral";
@@ -171,13 +147,80 @@ function setupStatsListeners(uid) {
     });
 }
 
+// --- DEPENDENTS (CHILD FEATURE) LOGIC ---
+let dependentCount = 0;
+window.openAddChildModal = () => {
+    if (dependentCount >= 5) return alert("Maximum 5 child profiles allowed.");
+    document.getElementById('add-child-modal').classList.remove('hidden');
+};
+window.closeAddChildModal = () => document.getElementById('add-child-modal').classList.add('hidden');
+
+function setupDependentsListener(uid) {
+    const q = query(collection(db, "Dependents"), where("parentId", "==", uid));
+    onSnapshot(q, (snapshot) => {
+        const container = document.getElementById('dependents-container');
+        const countDisplay = document.getElementById('child-count');
+        const trigger = document.getElementById('add-child-trigger');
+        container.querySelectorAll('.child-card').forEach(c => c.remove());
+        dependentCount = snapshot.size;
+        countDisplay.innerText = `${dependentCount}/5`;
+        snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            const age = calculateAge(data.dateOfBirth);
+            const card = document.createElement('div');
+            card.className = "child-card scroll-item bg-white border border-pink-100 p-5 rounded-[2rem] flex flex-col items-center justify-center text-center shadow-sm relative";
+            card.innerHTML = `
+                <div class="w-12 h-12 bg-pink-50 text-pink-500 rounded-full flex items-center justify-center mb-2">
+                    <i data-lucide="heart" class="w-6 h-6 fill-current"></i>
+                </div>
+                ${data.okuStatus ? '<span class="absolute top-4 right-4 bg-pink-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-sm">OKU</span>' : ''}
+                <h4 class="text-sm font-black text-gray-800 truncate w-full">${data.fullName}</h4>
+                <p class="text-[10px] text-pink-400 font-bold">${data.disabilityType}</p>
+                <p class="text-[10px] text-gray-400">${age} years old</p>
+                <button onclick="bookForChild('${data.fullName}', '${docSnap.id}')" class="mt-3 py-2 px-4 bg-pink-50 rounded-full text-[10px] font-black text-pink-500 flex items-center gap-1 hover:bg-pink-100">
+                    Book Now <i data-lucide="chevron-right" class="w-3 h-3"></i>
+                </button>`;
+            container.insertBefore(card, trigger);
+        });
+        trigger.style.display = dependentCount >= 5 ? 'none' : 'flex';
+        if (window.lucide) window.lucide.createIcons();
+    });
+}
+
+document.getElementById('add-child-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const saveBtn = e.target.querySelector('button');
+    saveBtn.innerText = "Saving...";
+    saveBtn.disabled = true;
+    try {
+        await addDoc(collection(db, "Dependents"), {
+            parentId: auth.currentUser.uid,
+            fullName: document.getElementById('child-name').value.trim(),
+            dateOfBirth: document.getElementById('child-dob').value,
+            disabilityType: document.getElementById('child-disability').value,
+            okuStatus: document.getElementById('child-oku-status').checked,
+            specialInstructions: document.getElementById('child-notes').value.trim(),
+            createdAt: new Date()
+        });
+        closeAddChildModal();
+        e.target.reset();
+    } catch (err) { console.error("Error adding child:", err); }
+    finally { saveBtn.innerText = "Save Child Profile"; saveBtn.disabled = false; }
+};
+
+window.bookForChild = (name, id) => {
+    localStorage.setItem('bookingForDependent', 'true');
+    localStorage.setItem('dependentName', name);
+    localStorage.setItem('dependentId', id);
+    window.location.href = 'booking.html';
+};
+
 // --- DOCTOR POPUP LOGIC ---
 window.openDoctorPopup = async () => {
     const popup = document.getElementById('doctor-popup');
     const list = document.getElementById('doctor-popup-list');
     popup.classList.remove('hidden');
     list.innerHTML = '<div class="text-center py-10 animate-pulse">Loading Specialists...</div>';
-
     try {
         const snapshot = await getDocs(collection(db, "Doctors"));
         list.innerHTML = '';
@@ -192,30 +235,28 @@ window.openDoctorPopup = async () => {
         lucide.createIcons();
     } catch (e) { list.innerHTML = '<p class="text-center text-red-500">Error loading specialists.</p>'; }
 };
-
 window.closeDoctorPopup = () => document.getElementById('doctor-popup').classList.add('hidden');
 
 // --- ANALYTICS LOGIC ---
-
-// --- 1. HELPERS FOR ANALYTICS ---
 function calculateAge(dobString) {
     if (!dobString) return null;
-    const [day, month, year] = dobString.split('/').map(Number);
-    const birthDate = new Date(year, month - 1, day);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const m = today.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) { age--; }
-    return age;
+    let parts;
+    if (dobString.includes('/')) {
+        parts = dobString.split('/').map(Number); // DD/MM/YYYY
+        const birthDate = new Date(parts[2], parts[1] - 1, parts[0]);
+        let age = new Date().getFullYear() - birthDate.getFullYear();
+        return age;
+    } else {
+        const birthDate = new Date(dobString); // YYYY-MM-DD
+        let age = new Date().getFullYear() - birthDate.getFullYear();
+        return age;
+    }
 }
 
-// --- 2. MAIN ANALYTICS FETCHING FUNCTION ---
 async function loadAnalyticalReport() {
     try {
-        // A. Fetch Total Patients & Age Groups
         const usersSnap = await getDocs(collection(db, "Users"));
         let ageGroups = { '18-25': 0, '26-40': 0, '41-60': 0, '60+': 0 };
-
         usersSnap.forEach(doc => {
             const data = doc.data();
             if (data.role === "Patient" && data.dateOfBirth) {
@@ -226,79 +267,46 @@ async function loadAnalyticalReport() {
                 else if (age > 60) ageGroups['60+']++;
             }
         });
-
-        // B. Fetch Weekly/Monthly Visits & Top Doctors
         const bookingsSnap = await getDocs(collection(db, "bookings"));
-        let weeklyVisits = 0;
-        let monthlyVisits = 0;
-        let doctorCounts = {};
-
+        let weeklyVisits = 0; let monthlyVisits = 0; let doctorCounts = {};
         const now = new Date();
         const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-
         bookingsSnap.forEach(doc => {
             const data = doc.data();
             const createdDate = data.createdAt?.seconds ? new Date(data.createdAt.seconds * 1000) : new Date(data.createdAt);
-
             if (data.status === "Completed" || data.status === "Upcoming") {
                 if (createdDate >= oneWeekAgo) weeklyVisits++;
                 if (createdDate >= oneMonthAgo) monthlyVisits++;
-                if (data.doctorName) {
-                    doctorCounts[data.doctorName] = (doctorCounts[data.doctorName] || 0) + 1;
-                }
+                if (data.doctorName) doctorCounts[data.doctorName] = (doctorCounts[data.doctorName] || 0) + 1;
             }
         });
-
-        // C. Update Text Elements
         document.getElementById('weekly-count').innerText = weeklyVisits;
         document.getElementById('monthly-count').innerText = monthlyVisits;
-
-        // D. Initialize the actual Charts with this data
         renderCharts(ageGroups, doctorCounts);
-
-    } catch (error) {
-        console.error("Analytical Report Error:", error);
-    }
+    } catch (error) { console.error("Analytical Report Error:", error); }
 }
 
-// --- 3. CHART RENDERING ---
 function renderCharts(ageData, doctorData) {
-    // Age Analysis Chart
     const ageCtx = document.getElementById('ageAnalysisChart');
     if (ageCtx) {
-        const existing = Chart.getChart(ageCtx);
-        if (existing) existing.destroy();
+        const existing = Chart.getChart(ageCtx); if (existing) existing.destroy();
         new Chart(ageCtx, {
             type: 'doughnut',
             data: {
                 labels: Object.keys(ageData),
-                datasets: [{
-                    data: Object.values(ageData),
-                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'],
-                    borderWidth: 0
-                }]
+                datasets: [{ data: Object.values(ageData), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'], borderWidth: 0 }]
             },
             options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right' } } }
         });
     }
-
-    // Top Doctors Chart
     const docCtx = document.getElementById('topDoctorsChart');
     if (docCtx) {
         const sorted = Object.entries(doctorData).sort(([, a], [, b]) => b - a).slice(0, 4);
-        const existing = Chart.getChart(docCtx);
-        if (existing) existing.destroy();
+        const existing = Chart.getChart(docCtx); if (existing) existing.destroy();
         new Chart(docCtx, {
             type: 'bar',
-            data: {
-                labels: sorted.map(d => d[0]),
-                datasets: [{
-                    data: sorted.map(d => d[1]),
-                    backgroundColor: '#009688',
-                    borderRadius: 8
-                }]
-            },
+            data: { labels: sorted.map(d => d[0]), datasets: [{ data: sorted.map(d => d[1]), backgroundColor: '#009688', borderRadius: 8 }] },
             options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
         });
     }
@@ -320,10 +328,8 @@ onAuthStateChanged(auth, async (user) => {
     if (user) {
         setupProfileListener(user.uid);
         setupStatsListeners(user.uid);
-
-        // IMPORTANT: Call the new analytics function
+        setupDependentsListener(user.uid);
         await loadAnalyticalReport();
-
         if (typeof window.loadAppointments === 'function') window.loadAppointments(user.uid);
         lucide.createIcons();
     } else {
