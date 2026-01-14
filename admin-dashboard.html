@@ -260,12 +260,10 @@
                             <h3 class="font-bold text-lg text-slate-800">Appointment Analytics</h3>
                             <p class="text-sm text-slate-500">Overview of clinic performance status</p>
                         </div>
-                        <div class="flex bg-slate-100 p-1 rounded-lg">
-                            <button
-                                class="px-4 py-1.5 bg-white shadow-sm rounded-md text-xs font-bold text-slate-800">Monthly</button>
-                            <button
-                                class="px-4 py-1.5 text-xs font-bold text-slate-500 hover:text-slate-800">Weekly</button>
-                        </div>
+                        <div class="flex bg-slate-100 p-1 rounded-lg" id="chart-toggle-group">
+    <button id="btn-monthly" onclick="toggleChartView('monthly')" class="px-4 py-1.5 bg-white shadow-sm rounded-md text-xs font-bold text-slate-800 transition-all">Monthly</button>
+    <button id="btn-weekly" onclick="toggleChartView('weekly')" class="px-4 py-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 rounded-md transition-all">Weekly</button>
+</div>
                     </div>
                     <div class="chart-container">
                         <canvas id="revenueChart"></canvas>
