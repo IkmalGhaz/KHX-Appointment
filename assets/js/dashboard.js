@@ -29,10 +29,72 @@ const editPhoneInput = document.getElementById('edit-prof-phone');
 const editAddressInput = document.getElementById('edit-prof-address');
 const editImgPreview = document.getElementById('edit-prof-img-preview');
 const imgUploadInput = document.getElementById('img-upload');
+const mobileFrame = document.querySelector('.mobile-frame');
+
+const lockPage = () => document.body.classList.add('no-scroll');
+const unlockPage = () => document.body.classList.remove('no-scroll');
 
 let currentUserDocId = null;
 
 // --- MODAL HANDLERS ---
+// --- UPDATED MODAL HANDLERS ---
+
+// Health Modal
+window.openHealthModal = () => {
+    document.getElementById('health-modal').classList.remove('hidden');
+    lockPage(); // Page becomes static
+};
+window.closeHealthModal = () => {
+    document.getElementById('health-modal').classList.add('hidden');
+    unlockPage(); // Page can scroll again
+};
+
+// Mood Modal
+window.openMoodModal = () => {
+    document.getElementById('mood-modal').classList.remove('hidden');
+    lockPage(); // Page becomes static
+};
+window.closeMoodModal = () => {
+    document.getElementById('mood-modal').classList.add('hidden');
+    unlockPage(); // Page can scroll again
+};
+
+// Specialist (Doctor) Popup
+window.openDoctorPopup = async () => {
+    const popup = document.getElementById('doctor-popup');
+    const list = document.getElementById('doctor-popup-list');
+    if (!popup || !list) return;
+
+    popup.classList.remove('hidden');
+    lockPage(); // Page becomes static
+
+    list.innerHTML = '<div class="text-center py-10 animate-pulse">Loading Specialists...</div>';
+    try {
+        const snapshot = await getDocs(collection(db, "Doctors"));
+        list.innerHTML = '';
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            list.innerHTML += `
+                <div class="bg-gray-50 p-4 rounded-[2rem] flex items-center gap-4 border border-gray-100 shadow-sm">
+                    <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-[#009688] shadow-sm">
+                        <i data-lucide="user" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-gray-800">${data.doctorName || data.name}</h4>
+                        <p class="text-xs text-[#009688] font-bold uppercase">${data.drSpecialization}</p>
+                    </div>
+                </div>`;
+        });
+        if (window.lucide) window.lucide.createIcons();
+    } catch (e) {
+        list.innerHTML = '<p class="text-center text-red-500">Error loading specialists.</p>';
+    }
+};
+
+window.closeDoctorPopup = () => {
+    document.getElementById('doctor-popup').classList.add('hidden');
+    unlockPage(); // Page can scroll again
+};
 if (imgUploadInput) {
     imgUploadInput.onchange = (e) => {
         const file = e.target.files[0];
@@ -45,6 +107,7 @@ if (imgUploadInput) {
         }
     };
 }
+
 if (profileIconBtn) profileIconBtn.onclick = () => profileViewModal.classList.remove('hidden');
 window.closeViewProfile = () => profileViewModal.classList.add('hidden');
 window.closeEditProfile = () => {
@@ -81,6 +144,7 @@ window.removeChildProfile = async (dependentId, childName) => {
         }
     }
 };
+
 
 // --- SAVING LOGIC (Anytime update from Dashboard Modals) ---
 
@@ -384,6 +448,39 @@ function setupStatsListeners(uid) {
             }
         }
     });
+}
+// Examplefor Health Modal
+function openHealthModal() {
+        document.getElementById('health-modal').classList.remove('hidden');
+        // LOCK SCROLL
+        mobileFrame.classList.add('overflow-hidden');
+    }
+
+function closeHealthModal() {
+        document.getElementById('health-modal').classList.add('hidden');
+        // UNLOCK SCROLL
+        mobileFrame.classList.remove('overflow-hidden');
+    }
+
+// Repeat this logic for Mood and Specialist popups:
+function openMoodModal() {
+    document.getElementById('mood-modal').classList.remove('hidden');
+    mobileFrame.classList.add('overflow-hidden');
+}
+
+function closeMoodModal() {
+    document.getElementById('mood-modal').classList.add('hidden');
+    mobileFrame.classList.remove('overflow-hidden');
+}
+
+function openDoctorPopup() {
+    document.getElementById('doctor-popup').classList.remove('hidden');
+    mobileFrame.classList.add('overflow-hidden');
+}
+
+function closeDoctorPopup() {
+    document.getElementById('doctor-popup').classList.add('hidden');
+    mobileFrame.classList.remove('overflow-hidden');
 }
 
 // --- DEPENDENTS LOGIC ---
