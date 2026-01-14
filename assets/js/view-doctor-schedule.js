@@ -10,7 +10,6 @@ let selectedAptId = null;
 onAuthStateChanged(auth, (user) => {
     if (user) {
         console.log("LOGGED IN AS DOCTOR:", user.uid);
-        // We pass the trimmed UID to ensure no spaces break the match
         loadAppointments(user.uid.trim());
     } else {
         window.location.href = "index.html";
@@ -22,11 +21,9 @@ async function loadAppointments(doctorId) {
     try {
         console.log(`Searching for bookings where doctorId == "${doctorId}"`);
 
-        // 1. First, try to fetch ANY booking to test connection
-        const testQ = query(collection(db, "bookings"), where("doctorId", "==", doctorId));
-        const snapshot = await getDocs(testQ);
-        
-        console.log(`Found ${snapshot.size} appointments for this doctor.`);
+        // 1. Fetch Data
+        const q = query(collection(db, "bookings"), where("doctorId", "==", doctorId));
+        const snapshot = await getDocs(q);
 
         if (snapshot.empty) {
             renderEmptyState(`ID: ${doctorId}`);
@@ -56,32 +53,21 @@ async function loadAppointments(doctorId) {
 
         allAppointments = await Promise.all(promises);
         
-        // Sort by Date
+        // 3. IMPORTANT: Sort by Date so months stay together
         allAppointments.sort((a, b) => new Date(a.date) - new Date(b.date));
+        
         renderList(allAppointments);
 
     } catch (error) {
         console.error("CRITICAL ERROR:", error);
-        
-        let errorMsg = "Unable to load schedule.";
-        if (error.code === 'permission-denied') {
-            errorMsg = "Database Permission Denied. Please update Firestore Rules.";
-        }
-        
-        aptList.innerHTML = `
-            <div class="text-center pt-10 px-6">
-                <p class="text-red-500 font-bold mb-2">Error Loading Data</p>
-                <p class="text-xs text-gray-400 break-words">${errorMsg}</p>
-                <p class="text-[10px] text-gray-300 mt-2 font-mono">Open Console (F12) for details</p>
-            </div>`;
+        aptList.innerHTML = `<p class="text-center pt-10 text-red-500">Error loading schedule.</p>`;
     }
 }
 
-// --- 3. Rendering ---
+// --- 3. Rendering (WITH MONTH HEADERS) ---
 function renderList(data) {
     aptList.innerHTML = '';
 
-    // Show Upcoming, Pending, and Pending Approval
     const active = data.filter(apt => 
         apt.status !== 'Cancelled' && 
         (
@@ -97,22 +83,42 @@ function renderList(data) {
         return;
     }
 
+    // --- TRACKER FOR MONTH GROUPING ---
+    let lastMonthYear = ""; 
+
     active.forEach(apt => {
-        // --- NEW: EXTRACT DAY & MONTH ---
-        // Assumes apt.date format is "15 January 2026"
+        // --- A. Extract Date Info ---
         let displayDay = "00";
         let displayMonth = "DEC";
+        let fullMonthYear = "Unknown Date"; // For the Header
 
         if (apt.date) {
+            // Assumes apt.date format is "15 January 2026"
             const parts = apt.date.split(' '); 
-            if (parts.length >= 2) {
-                displayDay = parts[0]; // "15"
-                displayMonth = parts[1].substring(0, 3).toUpperCase(); // "JAN"
+            if (parts.length >= 3) {
+                displayDay = parts[0]; 
+                displayMonth = parts[1].substring(0, 3).toUpperCase(); 
+                fullMonthYear = `${parts[1]} ${parts[2]}`; // e.g. "January 2026"
             }
         }
-        // --------------------------------
 
-        const formattedTime = formatTimeOnly(apt.time); // Helper to get "2:00 PM"
+        // --- B. Insert Header if Month Changes ---
+        if (fullMonthYear !== lastMonthYear) {
+            const header = document.createElement('div');
+            // Sticky header with blur effect
+            header.className = "sticky top-0 z-10 bg-[#f8fafc]/95 backdrop-blur-sm py-3 mb-2 mt-4 first:mt-0 flex items-center gap-2 border-b border-gray-200/50";
+            header.innerHTML = `
+                <div class="h-2 w-2 rounded-full bg-[#009688]"></div>
+                <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest">${fullMonthYear}</h2>
+            `;
+            aptList.appendChild(header);
+            
+            // Update tracker
+            lastMonthYear = fullMonthYear;
+        }
+
+        // --- C. Create Card ---
+        const formattedTime = formatTimeOnly(apt.time);
 
         const card = document.createElement('div');
         card.className = "bg-white p-4 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4 transition-all hover:shadow-md mb-3";
@@ -173,7 +179,6 @@ searchInput.addEventListener('input', (e) => {
     renderList(filtered);
 });
 
-// Helper to format just the time (e.g. "14:00" -> "2:00 PM")
 function formatTimeOnly(timeString) {
     if(!timeString) return "--:--";
     try {
@@ -202,7 +207,6 @@ document.getElementById('btn-cancel').onclick = () => updateStatus('Cancelled');
 async function updateStatus(status) {
     if(!selectedAptId) return;
     try {
-        // Change button text to show loading
         const btnId = status === 'Completed' ? 'btn-complete' : 'btn-cancel';
         const btn = document.getElementById(btnId);
         const originalText = btn.innerText;
@@ -210,14 +214,12 @@ async function updateStatus(status) {
 
         await updateDoc(doc(db, "bookings", selectedAptId), { status: status });
         
-        // Update local data
         const idx = allAppointments.findIndex(a => a.id === selectedAptId);
         if(idx > -1) allAppointments[idx].status = status;
         
         closeActionSheet();
         renderList(allAppointments); 
         
-        // Reset button text
         btn.innerText = originalText;
     } catch(e) {
         alert("Update failed: " + e.message);
