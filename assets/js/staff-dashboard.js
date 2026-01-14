@@ -8,7 +8,14 @@ const logoutBtn = document.getElementById('logout-btn');
 
 // --- Initialization ---
 onAuthStateChanged(auth, (user) => {
-    initDashboard();
+    // FIX: Only load the dashboard if the user is logged in
+    if (user) {
+        initDashboard();
+    } else {
+        // If not logged in, redirect to login page
+        console.log("No user detected, redirecting...");
+        window.location.href = "index.html";
+    }
 });
 
 function initDashboard() {

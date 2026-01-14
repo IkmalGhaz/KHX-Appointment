@@ -75,11 +75,10 @@
         const toggleBtn = document.getElementById('toggle-password');
         const eyeIcon = document.getElementById('eye-icon');
 
-        // 1. Force Sign Out on page load to prevent auto-login
-        // This clears any existing session from the browser's local storage.
+        // 1. Force Sign Out on Load
         signOut(auth).catch(err => console.error("Sign out error:", err));
 
-        // 2. Password Visibility Toggle Logic
+        // 2. Toggle Password Logic
         toggleBtn.addEventListener('click', () => {
             const isPassword = passwordInput.type === 'password';
             passwordInput.type = isPassword ? 'text' : 'password';
@@ -87,51 +86,82 @@
             lucide.createIcons();
         });
 
-        // 3. Role-Based Redirect Function
+        // 3. Logic: Check Database Role
         async function checkRoleAndRedirect(user) {
             try {
+                console.log("Checking database for User UID:", user.uid);
                 const userDoc = await getDoc(doc(db, "Users", user.uid));
                 
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
-                    // Redirection based on user role defined in Firestore
-                    if (userData.role === "admin") {
+                    const role = userData.role ? userData.role.trim() : "Patient";
+                    
+                    console.log("Role Found in DB:", role); // Check your console (F12) if redirection fails
+
+                    // Normalized checks (handle 'Staff', 'staff', 'STAFF')
+                    if (role === "admin") {
                         window.location.href = "admin-dashboard.html";
-                    } else if (userData.role === "Doctor") { 
+                    } else if (role === "Doctor") { 
                         window.location.href = "doctor-dashboard.html";
-                    } else if (userData.role === "Staff" || userData.role === "staff") {
-                        window.location.href = "staff-dashboard.html"; // Redirects to the staff dashboard
+                    } else if (role.toLowerCase() === "staff") { 
+                        window.location.href = "staff-dashboard.html"; 
                     } else {
-                        window.location.href = "dashboard.html"; // Default for patients
+                        window.location.href = "dashboard.html"; // Default
                     }
                 } else {
+                    console.warn("No 'Users' document found. Defaulting to Patient.");
+                    // Fallback to patient dashboard if no specific record exists
                     window.location.href = "dashboard.html";
                 }
             } catch (error) {
-                console.error("Error checking user role:", error);
-                window.location.href = "dashboard.html";
+                console.error("Database Error:", error);
+                
+                // If it's a permission error, show it
+                if (error.code === 'permission-denied') {
+                    errorMsg.innerText = "System Error: Database access denied.";
+                    submitBtn.innerHTML = `Sign In <i data-lucide="arrow-right" class="w-4 h-4"></i>`;
+                    submitBtn.disabled = false;
+                    lucide.createIcons();
+                } else {
+                    // General fallback
+                    window.location.href = "dashboard.html";
+                }
             }
         }
 
-        // 4. Manual Login Handler
+        // 4. Main Login Event
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = document.getElementById('email').value;
+            const email = document.getElementById('email').value.trim(); // Trim spaces
             const password = passwordInput.value;
 
             submitBtn.innerText = "Verifying...";
             submitBtn.disabled = true;
+            errorMsg.innerText = "";
 
             try {
-                // Manually authenticate with Firebase
+                // Step A: Authentication
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
-                // Trigger the role check only after successful form submission
+                console.log("Auth Success. Redirecting...");
+                
+                // Step B: Role Check
                 await checkRoleAndRedirect(userCredential.user);
+
             } catch (error) {
-                console.error(error);
-                errorMsg.innerText = "Invalid email or password.";
-                submitBtn.innerText = "Sign In";
+                console.error("Login Error:", error);
+                
+                if(error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                    errorMsg.innerText = "Invalid email or password.";
+                } else if (error.code === 'auth/network-request-failed') {
+                    errorMsg.innerText = "Network error. Check your connection.";
+                } else {
+                    errorMsg.innerText = "Error: " + error.message;
+                }
+                
+                // Reset Button
+                submitBtn.innerHTML = `Sign In <i data-lucide="arrow-right" class="w-4 h-4"></i>`;
                 submitBtn.disabled = false;
+                lucide.createIcons();
             }
         });
     </script>
