@@ -13,21 +13,31 @@ const finalConfirmBtn = document.getElementById('final-confirm-btn');
 // 1. Auth Observer
 onAuthStateChanged(auth, (user) => {
     if (user) {
-        // Initialize the real-time listener
         window.loadAppointments(user.uid);
     }
 });
 
-// --- CANCELLATION MODAL LOGIC ---
+// --- REBOOK LOGIC ---
+window.rebookAppointment = (serviceName, price, doctorId, doctorName) => {
+    const params = new URLSearchParams({
+        rebook: 'true',
+        serviceName: serviceName,
+        price: price,
+        doctorId: doctorId,
+        doctorName: doctorName
+    });
+    window.location.href = `booking.html?${params.toString()}`;
+};
 
+// --- CANCELLATION MODAL LOGIC ---
 window.cancelBooking = (id) => {
     appointmentToCancel = id;
-    reasonInput.value = '';
-    cancelModal.classList.remove('hidden');
+    if(reasonInput) reasonInput.value = '';
+    if(cancelModal) cancelModal.classList.remove('hidden');
 };
 
 window.closeCancelModal = () => {
-    cancelModal.classList.add('hidden');
+    if(cancelModal) cancelModal.classList.add('hidden');
     appointmentToCancel = null;
 };
 
@@ -46,32 +56,29 @@ if (confirmBtn) {
 if (finalConfirmBtn) {
     finalConfirmBtn.onclick = async () => {
         const reason = reasonInput.value.trim();
-        finalConfirmBtn.innerText = "Confirming in 3s...";
+        finalConfirmBtn.innerText = "Processing...";
         finalConfirmBtn.disabled = true;
 
-        // 3-second delay before processing
         setTimeout(async () => {
             try {
-                finalConfirmBtn.innerText = "Processing...";
                 const aptRef = doc(db, "bookings", appointmentToCancel);
-
                 await updateDoc(aptRef, {
                     status: 'Cancelled',
                     cancellationReason: reason,
                     cancelledAt: new Date()
                 });
 
-                alert("Appointment successfully cancelled.");
+                alert("Appointment cancelled.");
                 document.getElementById('booking-confirm-modal').classList.add('hidden');
-
-                // NOTE: No location.reload() needed because onSnapshot updates the UI automatically!
+                finalConfirmBtn.innerText = "Yes, Confirm Now";
+                finalConfirmBtn.disabled = false;
             } catch (error) {
                 console.error("Cancellation Error:", error);
                 alert("Failed to cancel: " + error.message);
                 finalConfirmBtn.innerText = "Yes, Confirm Now";
                 finalConfirmBtn.disabled = false;
             }
-        }, 3000);
+        }, 2000);
     };
 }
 
@@ -80,43 +87,33 @@ window.closeConfirmModal = () => {
     cancelModal.classList.remove('hidden');
 };
 
-// --- APPOINTMENT LIST & TAB LOGIC (OPTIMIZED) ---
-
-// Global state to hold all fetched appointments for easy filtering
+// --- APPOINTMENT LIST & TAB LOGIC ---
 let allUserAppointments = [];
 
 window.switchTab = (tab) => {
     currentTab = tab;
-
-    // Update UI Tab Buttons
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.remove('border-[#009688]', 'text-[#009688]');
         btn.classList.add('border-transparent', 'text-gray-400');
     });
-
-    // Set active tab style
     if (event && event.target) {
         event.target.classList.add('border-[#009688]', 'text-[#009688]');
         event.target.classList.remove('border-transparent', 'text-gray-400');
     }
-
-    // Re-render the list based on the new tab selection
     applyFiltersAndRender();
 };
 
-// Main Fetching Function using onSnapshot
 window.loadAppointments = (uid) => {
+    if(!aptList) return;
     aptList.innerHTML = '<div class="text-center py-10"><div class="animate-spin inline-block w-6 h-6 border-2 border-[#009688] border-t-transparent rounded-full"></div></div>';
-
+    
     const q = query(collection(db, "bookings"), where("patientId", "==", uid));
 
-    // Real-time listener: this stays active and updates the UI whenever Firestore data changes
     onSnapshot(q, (snapshot) => {
         allUserAppointments = [];
         snapshot.forEach(doc => {
             allUserAppointments.push({ id: doc.id, ...doc.data() });
         });
-
         applyFiltersAndRender();
     }, (error) => {
         console.error("Fetch error:", error);
@@ -125,6 +122,8 @@ window.loadAppointments = (uid) => {
 };
 
 function applyFiltersAndRender() {
+    allUserAppointments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
     const filtered = allUserAppointments.filter(apt => {
         if (currentTab === 'Upcoming') return apt.status === 'Upcoming' || apt.status === 'Pending Approval';
         if (currentTab === 'Cancelled') return apt.status === 'Cancelled';
@@ -136,6 +135,7 @@ function applyFiltersAndRender() {
 }
 
 function renderList(list) {
+    if (!aptList) return;
     if (list.length === 0) {
         aptList.innerHTML = `<div class="text-center py-10 text-gray-400 text-sm">No ${currentTab.toLowerCase()} appointments.</div>`;
         return;
@@ -167,30 +167,24 @@ function renderList(list) {
                 <span class="text-base font-black text-[#009688]">RM ${apt.price || '--'}</span>
                 
                 ${(apt.status === 'Upcoming' || apt.status === 'Pending Approval') ?
-            `<button onclick="cancelBooking('${apt.id}')" class="flex items-center gap-1 text-xs font-bold text-red-500 bg-red-50 px-4 py-2 rounded-xl hover:bg-red-100 transition-colors">
+                `<button onclick="cancelBooking('${apt.id}')" class="flex items-center gap-1 text-xs font-bold text-red-500 bg-red-50 px-4 py-2 rounded-xl hover:bg-red-100 transition-colors">
                     <i data-lucide="x" class="w-3 h-3"></i> Cancel
+                </button>` : ''}
+
+                ${(apt.status === 'Cancelled') ?
+                `<button onclick="rebookAppointment('${apt.serviceName}', '${apt.price}', '${apt.doctorId}', '${apt.doctorName}')" class="flex items-center gap-1 text-xs font-bold text-white bg-[#009688] px-4 py-2 rounded-xl hover:bg-[#00796b] transition-colors shadow-sm">
+                    <i data-lucide="refresh-cw" class="w-3 h-3"></i> Rebook
                 </button>` : ''}
             </div>
         </div>
     `).join('');
-    // Re-initialize icons
+    
     if (window.lucide) window.lucide.createIcons();
-
 }
 
 function getStatusStyle(status) {
     const s = status.toLowerCase();
-
-    // Upcoming / Pending -> Green
-    if (s === 'upcoming' || s === 'pending approval' || s === 'pending') {
-        return 'bg-green-100 text-green-700 border border-green-200';
-    }
-
-    // Cancelled -> Red
-    if (s === 'cancelled') {
-        return 'bg-red-100 text-red-700 border border-red-200';
-    }
-
-    // Past / Completed -> Dark Grey
+    if (s === 'upcoming' || s === 'pending approval' || s === 'pending') return 'bg-green-100 text-green-700 border border-green-200';
+    if (s === 'cancelled') return 'bg-red-100 text-red-700 border border-red-200';
     return 'bg-slate-800 text-white border border-slate-900';
 }
