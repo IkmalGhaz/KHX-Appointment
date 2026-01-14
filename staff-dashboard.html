@@ -12,7 +12,7 @@
     <style>
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: #ffffff; /* White background as per image */
+            background: #ffffff; 
             -webkit-tap-highlight-color: transparent; 
         }
         
@@ -20,7 +20,7 @@
             width: 100%; 
             max-width: 375px; 
             min-height: 812px; 
-            background: #ffffff; 
+            background: #f8fafc; /* Slightly gray background for contrast with white cards */
             margin: 0 auto; 
             overflow-x: hidden; 
             display: flex; 
@@ -40,27 +40,28 @@
 
         .no-scrollbar::-webkit-scrollbar { display: none; }
         
-        /* Card Styles matching the image */
+        /* Card Styles */
         .doctor-card {
             background: #FFFFFF;
             border-radius: 20px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); /* Soft shadow */
-            padding: 24px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            padding: 20px;
             margin-bottom: 16px;
-            border: 1px solid #f3f4f6;
+            border: 1px solid #f0f2f5;
+            transition: transform 0.2s;
+        }
+        
+        .doctor-card:active {
+            transform: scale(0.98);
         }
 
         .section-title {
-            font-size: 16px;
-            font-weight: 700;
-            color: #000000;
-            margin-bottom: 16px;
-        }
-
-        .date-display {
             font-size: 14px;
-            font-weight: 600;
-            color: #000000;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b; /* Slate-500 */
+            margin-bottom: 12px;
         }
     </style>
 </head>
@@ -68,31 +69,50 @@
 
     <div class="mobile-frame">
         
-        <div class="px-6 pt-10 pb-4">
-            <h1 class="text-3xl font-bold text-gray-900 mb-6">Welcome</h1>
+        <div class="bg-gradient-to-r from-[#009688] to-[#00796b] pt-12 pb-10 px-6 rounded-b-[2.5rem] shadow-lg mb-6 relative z-10">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-teal-100 text-xs font-bold uppercase tracking-wider mb-1" id="current-date">--</p>
+                    <h1 class="text-3xl font-bold text-white tracking-tight">Staff Portal</h1>
+                </div>
+                
+                <button id="logout-btn" class="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center text-white hover:bg-white/30 transition-all active:scale-95 shadow-sm">
+                    <i data-lucide="log-out" class="w-5 h-5"></i>
+                </button>
+            </div>
             
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="section-title mb-0">Doctor Available</h2>
-                <span id="current-date" class="date-display">--</span>
+            <div class="mt-4 flex items-center gap-2">
+                <div class="h-2 w-2 bg-green-400 rounded-full animate-pulse"></div>
+                <p class="text-teal-50 text-xs font-medium">Live Updates Active</p>
             </div>
         </div>
 
-        <div id="available-list" class="px-6 pb-2 space-y-4">
-            <div class="doctor-card animate-pulse">
-                <div class="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
-                <div class="h-4 bg-gray-200 rounded w-1/2"></div>
-            </div>
-        </div>
-
-        <div class="px-6 pt-6 pb-4">
-            <h2 class="section-title">Doctor Not Available</h2>
-        </div>
-
-        <div id="unavailable-list" class="px-6 pb-20 space-y-4">
+        <div class="flex-1 overflow-y-auto no-scrollbar px-6 pb-24">
+            
+            <div class="flex items-center gap-2 mb-4">
+                <i data-lucide="check-circle-2" class="w-5 h-5 text-[#009688]"></i>
+                <h2 class="font-bold text-gray-800 text-lg">Available Doctors</h2>
             </div>
 
-        <div class="fixed bottom-6 right-6 flex gap-3">
-             <a href="admin-dashboard.html" class="bg-gray-900 text-white p-4 rounded-full shadow-xl hover:bg-gray-800 transition-transform active:scale-95">
+            <div id="available-list" class="space-y-4 mb-8">
+                <div class="doctor-card animate-pulse border-l-4 border-[#009688]">
+                    <div class="h-6 bg-gray-200 rounded w-2/3 mb-3"></div>
+                    <div class="h-4 bg-gray-200 rounded w-1/3"></div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 mb-4 pt-4 border-t border-gray-100">
+                <i data-lucide="x-circle" class="w-5 h-5 text-gray-400"></i>
+                <h2 class="font-bold text-gray-400 text-lg">Currently Unavailable</h2>
+            </div>
+
+            <div id="unavailable-list" class="space-y-4">
+            </div>
+
+        </div>
+
+        <div class="fixed bottom-6 right-6 z-20">
+             <a href="admin-dashboard.html" class="flex items-center justify-center w-14 h-14 bg-[#009688] text-white rounded-full shadow-xl hover:bg-[#00796b] transition-transform active:scale-95 border-4 border-[#f8fafc]">
                 <i data-lucide="layout-grid" class="w-6 h-6"></i>
             </a>
         </div>

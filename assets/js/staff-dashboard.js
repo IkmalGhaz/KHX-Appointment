@@ -1,14 +1,13 @@
-import { db, collection, getDocs, query, where, onAuthStateChanged, auth } from './firebase-config.js';
+import { db, collection, getDocs, query, where, onAuthStateChanged, auth, signOut } from './firebase-config.js';
 
 // --- DOM Elements ---
 const availableList = document.getElementById('available-list');
 const unavailableList = document.getElementById('unavailable-list');
 const dateDisplay = document.getElementById('current-date');
+const logoutBtn = document.getElementById('logout-btn');
 
 // --- Initialization ---
 onAuthStateChanged(auth, (user) => {
-    // Allow view even if not strictly logged in for dev/demo purposes, 
-    // or wrap initDashboard() in 'if (user)' for security.
     initDashboard();
 });
 
@@ -20,45 +19,39 @@ function initDashboard() {
 // --- 1. Set Header Date ---
 function setDate() {
     const today = new Date();
-    // Format: "Tuesday, 13 January 2026"
-    const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-    dateDisplay.innerText = today.toLocaleDateString('en-GB', options);
+    // Format: "Tuesday, 13 Jan 2026"
+    const options = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' };
+    if(dateDisplay) dateDisplay.innerText = today.toLocaleDateString('en-GB', options);
 }
 
 // --- 2. Fetch Logic ---
 async function fetchDoctorStatus() {
     try {
-        // A. Generate Today's Date String (Matches Booking Format: "13 January 2026")
-        // Note: We strip the weekday for the DB query to match how bookings are saved.
         const todayObj = new Date();
         const day = todayObj.getDate();
         const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         const month = monthNames[todayObj.getMonth()];
         const year = todayObj.getFullYear();
-        const todayStr = `${day} ${month} ${year}`; // e.g., "13 January 2026"
+        const todayStr = `${day} ${month} ${year}`; 
 
         console.log("Fetching data for:", todayStr);
 
-        // B. Run Queries in Parallel
         const [doctorsSnap, timeOffSnap, bookingsSnap] = await Promise.all([
             getDocs(collection(db, "Doctors")),
             getDocs(query(collection(db, "TimeOff"), where("date", "==", todayStr))),
             getDocs(query(collection(db, "bookings"), where("date", "==", todayStr)))
         ]);
 
-        // C. Process Data
         const doctors = [];
         doctorsSnap.forEach(doc => doctors.push({ id: doc.id, ...doc.data() }));
 
         const unavailableDoctorIds = new Set();
         timeOffSnap.forEach(doc => unavailableDoctorIds.add(doc.data().doctorId));
 
-        // D. Group Bookings by Doctor
-        const doctorSchedule = {}; // { doctorId: ["09:00", "14:00"] }
+        const doctorSchedule = {}; 
 
         bookingsSnap.forEach(doc => {
             const data = doc.data();
-            // Filter out cancelled bookings
             if (data.status !== 'Cancelled') {
                 if (!doctorSchedule[data.doctorId]) {
                     doctorSchedule[data.doctorId] = [];
@@ -67,19 +60,15 @@ async function fetchDoctorStatus() {
             }
         });
 
-        // E. Sort Bookings for each doctor
         for (const docId in doctorSchedule) {
-            doctorSchedule[docId].sort(); // Simple string sort works for 24h format or fixed length 09:00
+            doctorSchedule[docId].sort(); 
         }
 
-        // F. Separate Doctors into Lists
         const available = [];
         const unavailable = [];
 
         doctors.forEach(doc => {
-            // Attach specific schedule to the doctor object
             doc.appointments = doctorSchedule[doc.id] || [];
-
             if (unavailableDoctorIds.has(doc.id)) {
                 unavailable.push(doc);
             } else {
@@ -102,43 +91,45 @@ function renderLists(available, unavailable) {
 
     // --- Render Available Doctors ---
     if (available.length === 0) {
-        availableList.innerHTML = `<p class="text-gray-400 text-sm italic">No doctors available today.</p>`;
+        availableList.innerHTML = `<div class="text-center py-8 opacity-50"><i data-lucide="coffee" class="w-8 h-8 mx-auto mb-2 text-[#009688]"></i><p class="text-gray-500 text-sm font-medium">No doctors available.</p></div>`;
     } else {
         available.forEach(doc => {
             const card = document.createElement('div');
-            card.className = "doctor-card flex flex-col justify-between min-h-[140px]";
+            // Added border-l-4 border-[#009688] for the teal accent
+            card.className = "doctor-card border-l-4 border-[#009688] flex flex-col justify-between min-h-[120px]";
             
-            // Logic to display appointment times
             let timeDisplayHtml = '';
             
             if (doc.appointments.length > 0) {
-                // If they have appointments, list them nicely
                 const times = doc.appointments.map(t => 
-                    `<span class="bg-red-50 text-red-600 px-2 py-1 rounded text-xs font-bold border border-red-100">${t}</span>`
+                    `<span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-[10px] font-bold border border-gray-200">${t}</span>`
                 ).join(" ");
                 
                 timeDisplayHtml = `
-                    <div class="mt-2">
-                        <p class="text-xs text-gray-500 font-bold mb-1">Busy at:</p>
+                    <div class="mt-3 pt-3 border-t border-gray-50">
+                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">Booked Slots</p>
                         <div class="flex flex-wrap gap-2">${times}</div>
                     </div>
                 `;
             } else {
-                // No appointments
                 timeDisplayHtml = `
-                    <div class="flex items-center gap-2 text-green-600 mt-1">
-                        <i data-lucide="check-circle" class="w-4 h-4"></i>
-                        <span class="text-sm font-bold">Free all day</span>
+                    <div class="mt-3 pt-3 border-t border-gray-50 flex items-center gap-2 text-[#009688]">
+                        <div class="w-2 h-2 rounded-full bg-[#009688]"></div>
+                        <span class="text-xs font-bold">Free all day</span>
                     </div>
                 `;
             }
 
             card.innerHTML = `
-                <div>
-                    <h3 class="text-lg font-bold text-gray-900">${doc.doctorName || doc.name || 'Dr. Unknown'}</h3>
-                    <p class="text-xs text-gray-400 font-bold uppercase tracking-wide mt-0.5">${doc.drSpecialization || 'Specialist'}</p>
+                <div class="flex items-start justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900">${doc.doctorName || doc.name || 'Dr. Unknown'}</h3>
+                        <p class="text-xs text-[#009688] font-bold uppercase tracking-wide mt-0.5">${doc.drSpecialization || 'Specialist'}</p>
+                    </div>
+                    <div class="bg-[#e0f2f1] p-2 rounded-xl text-[#009688]">
+                        <i data-lucide="stethoscope" class="w-5 h-5"></i>
+                    </div>
                 </div>
-                
                 ${timeDisplayHtml}
             `;
             availableList.appendChild(card);
@@ -147,7 +138,7 @@ function renderLists(available, unavailable) {
 
     // --- Render Unavailable Doctors ---
     if (unavailable.length === 0) {
-        unavailableList.innerHTML = `<p class="text-gray-300 text-xs italic">All doctors are working today.</p>`;
+        unavailableList.innerHTML = `<p class="text-gray-300 text-xs italic text-center py-4">All doctors are active today.</p>`;
     } else {
         unavailable.forEach(doc => {
             const card = document.createElement('div');
@@ -156,8 +147,8 @@ function renderLists(available, unavailable) {
             card.innerHTML = `
                  <div class="flex justify-between items-center">
                     <div>
-                        <h3 class="text-lg font-bold text-gray-600">${doc.doctorName || doc.name || 'Dr. Unknown'}</h3>
-                        <p class="text-sm text-gray-400">${doc.drSpecialization || 'Specialist'}</p>
+                        <h3 class="text-base font-bold text-gray-600">${doc.doctorName || doc.name || 'Dr. Unknown'}</h3>
+                        <p class="text-xs text-gray-400">${doc.drSpecialization || 'Specialist'}</p>
                     </div>
                     <span class="text-[10px] font-bold bg-gray-200 text-gray-500 px-2 py-1 rounded uppercase">Off Duty</span>
                 </div>
@@ -167,4 +158,19 @@ function renderLists(available, unavailable) {
     }
 
     if(window.lucide) window.lucide.createIcons();
+}
+
+// --- 4. Logout Logic ---
+if (logoutBtn) {
+    logoutBtn.onclick = async () => {
+        if (confirm("Are you sure you want to log out?")) {
+            try {
+                await signOut(auth);
+                window.location.href = "index.html";
+            } catch (error) {
+                console.error("Logout Error:", error);
+                alert("Failed to logout.");
+            }
+        }
+    };
 }
