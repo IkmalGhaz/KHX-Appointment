@@ -449,7 +449,7 @@ async function checkCancelledAppointments(patientId) {
                     `;
                     }
 
-                    const waMsg = `Hi Admin, my appointment (ID: ${bookingId}) with ${docName} was cancelled. I would like to request a refund.`;
+                    const waMsg = `Hi Admin, my appointment (Date: ${date}) with ${docName} was cancelled. I would like to request a refund.`;
                     const waLink = `https://wa.me/60194116487?text=${encodeURIComponent(waMsg)}`;
                     const linkBtn = document.getElementById('whatsapp-refund-link');
                     if (linkBtn) linkBtn.href = waLink;
