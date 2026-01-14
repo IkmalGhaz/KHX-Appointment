@@ -1,14 +1,14 @@
 import { db, collection, getDocs, query, where, addDoc, doc, updateDoc, auth, onAuthStateChanged } from './firebase-config.js';
 
-const TOYYIB_SECRET_KEY = 'o504fpag-2soa-wror-wz4j-t2zw35csf6ux'; 
-const TOYYIB_CATEGORY_CODE = 'vqli37z5'; 
-const PROXY_URL = 'https://corsproxy.io/?'; 
+const TOYYIB_SECRET_KEY = 'o504fpag-2soa-wror-wz4j-t2zw35csf6ux';
+const TOYYIB_CATEGORY_CODE = 'vqli37z5';
+const PROXY_URL = 'https://corsproxy.io/?';
 
 // --- HELPERS ---
 function parseFriendlyDateToObj(dateStr) {
     if (!dateStr) return null;
-    const parts = dateStr.split(' '); 
-    if(parts.length !== 3) return null;
+    const parts = dateStr.split(' ');
+    if (parts.length !== 3) return null;
     const day = parseInt(parts[0]);
     const monthName = parts[1];
     const year = parseInt(parts[2]);
@@ -20,17 +20,17 @@ function parseFriendlyDateToObj(dateStr) {
 
 // --- STATE MANAGEMENT ---
 let currentStep = 1;
-let bookingData = { 
-    serviceId: null, 
-    serviceName: null, 
-    price: null, 
-    doctorId: null, 
-    doctorName: null, 
-    date: null, 
-    time: null 
+let bookingData = {
+    serviceId: null,
+    serviceName: null,
+    price: null,
+    doctorId: null,
+    doctorName: null,
+    date: null,
+    time: null
 };
 let blockedDates = [];
-let bookedTimes = []; // NEW: Stores specific times that are already taken for the selected date 
+let bookedTimes = [];
 
 // --- 1. NAVIGATION LOGIC ---
 window.handleBack = () => {
@@ -44,21 +44,21 @@ window.handleBack = () => {
 function showStep(step) {
     document.querySelectorAll('.step-content').forEach(el => el.classList.add('hidden'));
     const target = document.getElementById(`step-${step}`);
-    if(target) target.classList.remove('hidden');
+    if (target) target.classList.remove('hidden');
     updateHeader(step);
     currentStep = step;
-    if(window.lucide) window.lucide.createIcons();
+    if (window.lucide) window.lucide.createIcons();
 }
 
 function updateHeader(step) {
     const titles = ["Choose Service", "Choose Doctor", "Date & Time", "Payment", "Success"];
     const subs = ["Select care type", "Select specialist", "When to come?", "Review & Pay", "All done!"];
-    
+
     document.getElementById('step-lbl').innerText = step;
-    document.getElementById('page-title').innerText = titles[step-1] || "Booking";
-    document.getElementById('page-subtitle').innerText = subs[step-1] || "";
-    
-    const percent = Math.min((step / 4) * 100, 100); 
+    document.getElementById('page-title').innerText = titles[step - 1] || "Booking";
+    document.getElementById('page-subtitle').innerText = subs[step - 1] || "";
+
+    const percent = Math.min((step / 4) * 100, 100);
     document.getElementById('progress-bar').style.width = `${percent}%`;
 }
 
@@ -87,7 +87,7 @@ async function loadServices() {
             const card = document.createElement('div');
             card.className = "bg-white p-4 rounded-2xl cursor-pointer border border-transparent hover:border-[#009688] transition-all shadow-sm mb-3 group";
 
-            // ADJUSTMENT HERE: Check for 'desc' or 'description'
+            // Fix: Fetch description correctly from database
             const serviceDescription = data.desc || data.description || "No description available.";
 
             card.innerHTML = `
@@ -128,7 +128,7 @@ async function loadServices() {
 // --- 3. LOAD DOCTORS ---
 async function loadDoctors() {
     const container = document.getElementById('doctor-list');
-    if(!container) return;
+    if (!container) return;
     container.innerHTML = `
         <div class="animate-pulse bg-white p-4 rounded-2xl h-24 border border-gray-100 mb-3 shadow-sm"></div>
         <div class="animate-pulse bg-white p-4 rounded-2xl h-24 border border-gray-100 mb-3 shadow-sm"></div>
@@ -137,7 +137,7 @@ async function loadDoctors() {
     try {
         const snapshot = await getDocs(collection(db, "Doctors"));
         container.innerHTML = '';
-        
+
         let doctors = [];
         const selectedId = String(bookingData.serviceId || "");
 
@@ -151,7 +151,7 @@ async function loadDoctors() {
                     role: data.drSpecialization || "Specialist",
                     exp: data.yearOfExperience || 5,
                     rating: data.rating || "5.0",
-                    image: data.image || data.profilePic || null 
+                    image: data.image || data.profilePic || null
                 });
             }
         });
@@ -164,7 +164,7 @@ async function loadDoctors() {
         doctors.forEach(data => {
             const card = document.createElement('div');
             card.className = "relative bg-white p-4 rounded-2xl border border-gray-100 shadow-sm mb-3 cursor-pointer hover:border-[#009688] hover:shadow-md transition-all flex items-center gap-4 group overflow-hidden";
-            
+
             let profileHtml;
             if (data.image) {
                 profileHtml = `<img src="${data.image}" class="w-14 h-14 rounded-full object-cover border border-gray-200 shrink-0" alt="${data.name}">`;
@@ -192,18 +192,18 @@ async function loadDoctors() {
                     <i data-lucide="chevron-right" class="w-5 h-5"></i>
                 </div>
             `;
-            
+
             card.addEventListener('click', async () => {
                 bookingData.doctorId = data.id;
                 bookingData.doctorName = data.name;
                 await fetchDoctorSchedule(data.id);
-                initFlatpickr(); 
+                initFlatpickr();
                 showStep(3);
             });
             container.appendChild(card);
         });
-        
-        if(window.lucide) window.lucide.createIcons();
+
+        if (window.lucide) window.lucide.createIcons();
     } catch (e) {
         console.error(e);
         container.innerHTML = `<p class="text-center text-red-400 py-8">System Error.</p>`;
@@ -212,15 +212,15 @@ async function loadDoctors() {
 
 // --- 4. FETCH BLOCKED DATES ---
 async function fetchDoctorSchedule(doctorId) {
-    blockedDates = []; 
+    blockedDates = [];
     try {
         const q = query(collection(db, "TimeOff"), where("doctorId", "==", doctorId));
         const snapshot = await getDocs(q);
-        
+
         snapshot.forEach(doc => {
-            const rawDate = doc.data().date; 
+            const rawDate = doc.data().date;
             const dateObj = parseFriendlyDateToObj(rawDate);
-            if(dateObj) {
+            if (dateObj) {
                 blockedDates.push(dateObj);
             }
         });
@@ -228,40 +228,38 @@ async function fetchDoctorSchedule(doctorId) {
         console.error("Error fetching schedule:", e);
     }
 }
-// NEW: Fetch bookings for a specific date to disable specific times
+
 async function fetchBookedSlots(doctorId, dateString) {
-    bookedTimes = []; // Reset
+    bookedTimes = [];
     const timeSlotContainer = document.getElementById('time-slots');
-    // Show loading state
-    if(timeSlotContainer) timeSlotContainer.innerHTML = '<div class="col-span-2 text-center py-4"><div class="animate-spin inline-block w-5 h-5 border-2 border-[#009688] border-t-transparent rounded-full"></div></div>';
+    if (timeSlotContainer) timeSlotContainer.innerHTML = '<div class="col-span-2 text-center py-4"><div class="animate-spin inline-block w-5 h-5 border-2 border-[#009688] border-t-transparent rounded-full"></div></div>';
 
     try {
-        // Find bookings for this doctor + this date that are NOT cancelled
-        const q = query(collection(db, "bookings"), 
+        const q = query(collection(db, "bookings"),
             where("doctorId", "==", doctorId),
             where("date", "==", dateString),
             where("status", "!=", "Cancelled")
         );
-        
+
         const snapshot = await getDocs(q);
         snapshot.forEach(doc => {
             const data = doc.data();
             if (data.time) bookedTimes.push(data.time);
         });
-        
+
     } catch (e) {
         console.error("Error fetching booked slots:", e);
     }
-    // Now render the buttons
     renderTimeSlots();
 }
+
 // --- 5. INITIALIZE FLATPICKR ---
 function initFlatpickr() {
     const timeSlotContainer = document.getElementById('time-slots');
-    if(timeSlotContainer) timeSlotContainer.innerHTML = '<p class="text-gray-400 text-sm italic col-span-2">Select a date above to see times.</p>';
+    if (timeSlotContainer) timeSlotContainer.innerHTML = '<p class="text-gray-400 text-sm italic col-span-2">Select a date above to see times.</p>';
 
     const input = document.getElementById('date-picker');
-    if(!input) return;
+    if (!input) return;
 
     if (input._flatpickr) {
         input._flatpickr.destroy();
@@ -269,60 +267,50 @@ function initFlatpickr() {
 
     flatpickr("#date-picker", {
         minDate: "today",
-        maxDate: new Date().fp_incr(90), 
-        disable: blockedDates, 
-        dateFormat: "d F Y",   
-        disableMobile: "true", 
-        defaultDate: bookingData.date, 
+        maxDate: new Date().fp_incr(90),
+        disable: blockedDates,
+        dateFormat: "d F Y",
+        disableMobile: "true",
+        defaultDate: bookingData.date,
         locale: { firstDayOfWeek: 1 },
-        
-     onChange: function(selectedDates, dateStr, instance) {
-    bookingData.date = dateStr; 
-    
-    // 1. Clear the old buttons immediately so user knows it is loading
-    document.getElementById('time-slots').innerHTML = '<p class="col-span-2 text-center text-gray-400">Checking availability...</p>';
 
-    // 2. Ask Firebase: "Which times are taken?"
-    // (This function will automatically draw the RED buttons when it finishes)
-    fetchBookedSlots(bookingData.doctorId, dateStr);
-
-    input.classList.add('border-[#009688]', 'ring-1', 'ring-[#009688]');
-}
+        onChange: function (selectedDates, dateStr, instance) {
+            bookingData.date = dateStr;
+            document.getElementById('time-slots').innerHTML = '<p class="col-span-2 text-center text-gray-400">Checking availability...</p>';
+            fetchBookedSlots(bookingData.doctorId, dateStr);
+            input.classList.add('border-[#009688]', 'ring-1', 'ring-[#009688]');
+        }
     });
 }
 
 function renderTimeSlots() {
     const container = document.getElementById('time-slots');
-    if(!container) return;
-const slots = ['9:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
-container.innerHTML = '';
-    
+    if (!container) return;
+    const slots = ['9:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
+    container.innerHTML = '';
+
     const now = new Date();
     const currentHour = now.getHours();
     const selectedDate = new Date(bookingData.date);
-    
+
     const isToday = selectedDate.getDate() === now.getDate() &&
-                    selectedDate.getMonth() === now.getMonth() &&
-                    selectedDate.getFullYear() === now.getFullYear();
+        selectedDate.getMonth() === now.getMonth() &&
+        selectedDate.getFullYear() === now.getFullYear();
 
     slots.forEach(time => {
         const btn = document.createElement('button');
         btn.type = 'button';
         const slotHour = parseInt(time.substring(0, 2));
-        
-        // 1. Check if time passed today
+
         let isExpired = isToday && (slotHour <= currentHour);
-        
-        // 2. NEW: Check if time is already in database
         let isTaken = bookedTimes.includes(time);
 
         if (isExpired) {
             btn.className = "bg-gray-50 border border-gray-100 text-gray-300 py-3 rounded-xl font-bold cursor-not-allowed";
             btn.innerText = time;
             btn.disabled = true;
-        } 
+        }
         else if (isTaken) {
-            // Style for TAKEN slots
             btn.className = "bg-red-50 border border-red-100 text-red-300 py-3 rounded-xl font-bold cursor-not-allowed relative overflow-hidden";
             btn.innerHTML = `<span class="relative z-10">${time}</span> <div class="absolute inset-0 flex items-center justify-center bg-white/50 text-[10px] text-red-500 font-black rotate-12">Fully Booked</div>`;
             btn.disabled = true;
@@ -330,18 +318,18 @@ container.innerHTML = '';
         else {
             btn.className = "bg-white border border-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-[#009688] hover:text-white transition-all shadow-sm";
             btn.innerText = time;
-            
+
             btn.onclick = (e) => {
-                e.preventDefault(); 
+                e.preventDefault();
                 Array.from(container.children).forEach(c => {
                     if (!c.disabled) {
-                         c.className = "bg-white border border-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-[#009688] hover:text-white transition-all shadow-sm";
+                        c.className = "bg-white border border-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-[#009688] hover:text-white transition-all shadow-sm";
                     }
                 });
                 btn.className = "bg-[#009688] border border-[#009688] text-white py-3 rounded-xl font-bold shadow-md transform scale-105 transition-all";
-                
+
                 bookingData.time = time;
-                setTimeout(() => setupPaymentScreen(), 200); 
+                setTimeout(() => setupPaymentScreen(), 200);
             };
         }
         container.appendChild(btn);
@@ -371,7 +359,7 @@ window.selectPayment = (method) => {
 window.processPayment = async () => {
     const btn = document.getElementById('pay-btn-main');
     const originalText = btn.innerText;
-    
+
     if (!auth.currentUser) return alert("Please login first.");
 
     btn.innerHTML = "Processing...";
@@ -379,40 +367,52 @@ window.processPayment = async () => {
 
     try {
         const user = auth.currentUser;
+        const isDependent = localStorage.getItem('bookingForDependent') === 'true';
+        const dependentId = localStorage.getItem('dependentId');
+        const dependentName = localStorage.getItem('dependentName');
 
-        const checkQ = query(collection(db, "bookings"), 
+        // Verify slot is still available (includes 'Pending Approval' check)
+        const checkQ = query(collection(db, "bookings"),
             where("doctorId", "==", bookingData.doctorId),
             where("date", "==", bookingData.date),
             where("time", "==", bookingData.time),
             where("status", "!=", "Cancelled")
         );
         const checkSnap = await getDocs(checkQ);
-        
+
         if (!checkSnap.empty) {
-            alert(`Sorry! The slot ${bookingData.time} on ${bookingData.date} was just booked by another patient. Please choose another time.`);
+            alert(`Sorry! The slot ${bookingData.time} on ${bookingData.date} was just booked. Please choose another time.`);
             btn.innerText = originalText;
             btn.disabled = false;
-            showStep(3); // Send them back to date selection
-            // Refresh the slots to show the newly booked one
-            fetchBookedSlots(bookingData.doctorId, bookingData.date); 
-            return; // STOP EXECUTION
+            showStep(3);
+            fetchBookedSlots(bookingData.doctorId, bookingData.date);
+            return;
         }
-        // -------------------------------------
-        
-        const docRef = await addDoc(collection(db, "bookings"), {
+
+        const bookingPayload = {
             patientId: user.uid,
+            isDependentBooking: isDependent,
+            dependentId: isDependent ? dependentId : null,
+            childName: isDependent ? dependentName : null,
             doctorName: bookingData.doctorName,
             doctorId: bookingData.doctorId,
             serviceName: bookingData.serviceName,
             price: bookingData.price,
-            date: bookingData.date, 
+            date: bookingData.date,
             time: bookingData.time,
             paymentMethod: selectedMethod,
             paymentStatus: "Pending",
             status: "Pending Approval",
             createdAt: new Date()
-        });
-        
+        };
+
+        const docRef = await addDoc(collection(db, "bookings"), bookingPayload);
+
+        // Clear child booking data from storage
+        localStorage.removeItem('bookingForDependent');
+        localStorage.removeItem('dependentName');
+        localStorage.removeItem('dependentId');
+
         const bookingId = docRef.id;
 
         if (selectedMethod === 'fpx') {
@@ -437,7 +437,7 @@ async function initiateToyyibPay(bookingId, price, user) {
     const amountInCents = Math.round(parseFloat(price) * 100);
     const returnUrl = `${window.location.origin}${window.location.pathname}?status=success&booking_id=${bookingId}`;
 
-    let safeBillName = `Appt: ${bookingData.serviceName}`; 
+    let safeBillName = `Appt: ${bookingData.serviceName}`;
     if (safeBillName.length > 30) safeBillName = safeBillName.substring(0, 30);
 
     let safeBillDesc = `Dr. ${bookingData.doctorName} on ${bookingData.date}`;
@@ -452,7 +452,7 @@ async function initiateToyyibPay(bookingId, price, user) {
     params.append('billPayorInfo', 1);
     params.append('billAmount', amountInCents);
     params.append('billReturnUrl', returnUrl);
-    params.append('billCallbackUrl', 'https://reqres.in/api/users'); 
+    params.append('billCallbackUrl', 'https://reqres.in/api/users');
     params.append('billExternalReferenceNo', bookingId);
     params.append('billTo', user.displayName || 'Patient');
     params.append('billEmail', user.email);
@@ -501,7 +501,7 @@ async function checkPaymentReturn() {
                 <div class="loader"></div>
                 <h2 style="color:#004d40">Verifying Payment...</h2>
             </div>`;
-        
+
         try {
             const bookingRef = doc(db, "bookings", bookingId);
             await updateDoc(bookingRef, {
@@ -511,7 +511,7 @@ async function checkPaymentReturn() {
             });
             localStorage.setItem('paymentSuccess', 'true');
             window.history.replaceState({}, document.title, window.location.pathname);
-            window.location.reload(); 
+            window.location.reload();
         } catch (error) {
             console.error("Update Error:", error);
             alert("Payment recorded, but status update failed.");
@@ -520,23 +520,15 @@ async function checkPaymentReturn() {
     }
 }
 
-// --- NEW FUNCTION: CHECK REBOOKING URL PARAMS ---
 async function checkRebookParams() {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('rebook') === 'true') {
-        // 1. Populate Data
         bookingData.serviceName = urlParams.get('serviceName');
         bookingData.price = urlParams.get('price');
         bookingData.doctorId = urlParams.get('doctorId');
         bookingData.doctorName = urlParams.get('doctorName');
-
-        // 2. Fetch Schedule for this doctor
         await fetchDoctorSchedule(bookingData.doctorId);
-
-        // 3. Init Calendar
         initFlatpickr();
-
-        // 4. Jump to Step 3
         showStep(3);
     }
 }
@@ -546,13 +538,24 @@ onAuthStateChanged(auth, (user) => {
     if (!user) {
         window.location.href = "index.html";
     } else {
+        // Update Child Booking Badge if applicable
+        const isDependent = localStorage.getItem('bookingForDependent') === 'true';
+        if (isDependent) {
+            const depName = localStorage.getItem('dependentName');
+            const badge = document.getElementById('booking-for-badge');
+            const nameDisplay = document.getElementById('dependent-name-display');
+            if (badge && nameDisplay) {
+                nameDisplay.innerText = depName;
+                badge.classList.remove('hidden');
+            }
+        }
+
         if (localStorage.getItem('paymentSuccess') === 'true') {
             localStorage.removeItem('paymentSuccess');
             loadServices().then(() => showStep(5));
         } else {
             checkPaymentReturn();
             loadServices();
-            // Call rebook check
             checkRebookParams();
         }
     }

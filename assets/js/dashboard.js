@@ -1,5 +1,7 @@
 import {
-    auth, db, storage, onAuthStateChanged, collection, query, where, onSnapshot, doc, updateDoc, signOut, ref, uploadBytes, getDownloadURL, getDocs, addDoc
+    auth, db, storage, onAuthStateChanged, collection, query, where,
+    onSnapshot, doc, updateDoc, signOut, ref, uploadBytes,
+    getDownloadURL, getDocs, addDoc, deleteDoc // <--- Make sure deleteDoc is here
 } from './firebase-config.js';
 
 // --- UI Elements ---
@@ -54,6 +56,19 @@ window.openHealthModal = () => document.getElementById('health-modal').classList
 window.closeHealthModal = () => document.getElementById('health-modal').classList.add('hidden');
 window.openMoodModal = () => document.getElementById('mood-modal').classList.remove('hidden');
 window.closeMoodModal = () => document.getElementById('mood-modal').classList.add('hidden');
+// Function to remove a child profile from Firestore
+window.removeChildProfile = async (dependentId, childName) => {
+    if (confirm(`Are you sure you want to remove ${childName}'s profile?`)) {
+        try {
+            const docRef = doc(db, "Dependents", dependentId); //
+            await deleteDoc(docRef); //
+            alert("Profile removed successfully.");
+        } catch (error) {
+            console.error("Error removing child profile:", error);
+            alert("Failed to remove profile. Please try again.");
+        }
+    }
+};
 
 // --- SAVING LOGIC (Anytime update from Dashboard Modals) ---
 
@@ -149,6 +164,107 @@ function setupProfileListener(uid) {
             const dashUserName = document.getElementById('user-name');
             if (dashUserName) dashUserName.innerText = data.fullName || "Valued Patient";
         }
+    });
+}
+function setupProfileDependents(uid) {
+    const q = query(collection(db, "Dependents"), where("parentId", "==", uid));
+    onSnapshot(q, (snapshot) => {
+        const listContainer = document.getElementById('profile-dependents-list');
+        if (!listContainer) return;
+
+        if (snapshot.empty) {
+            listContainer.innerHTML = '<p class="text-xs text-gray-400 italic ml-1">No children registered yet.</p>';
+            return;
+        }
+
+        listContainer.innerHTML = '';
+        snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            const childDiv = document.createElement('div');
+            childDiv.className = "flex items-center justify-between bg-gray-50 border border-gray-100 rounded-xl p-3";
+            childDiv.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <i data-lucide="baby" class="w-4 h-4 text-pink-500"></i>
+                    <div>
+                        <p class="text-sm font-bold text-gray-800">${data.fullName}</p>
+                        <p class="text-[10px] text-gray-400">${data.disabilityType || 'General'}</p>
+                    </div>
+                </div>
+                ${data.okuStatus ? '<span class="text-[8px] bg-pink-500 text-white px-2 py-0.5 rounded-full font-bold">OKU</span>' : ''}
+            `;
+            listContainer.appendChild(childDiv);
+        });
+        if (window.lucide) window.lucide.createIcons();
+    });
+}
+function setupProfileDependentsList(uid) {
+    const q = query(collection(db, "Dependents"), where("parentId", "==", uid));
+    onSnapshot(q, (snapshot) => {
+        const listContainer = document.getElementById('profile-dependents-list');
+        if (!listContainer) return;
+
+        if (snapshot.empty) {
+            listContainer.innerHTML = '<p class="text-xs text-gray-400 italic px-1">No children registered.</p>';
+            return;
+        }
+
+        listContainer.innerHTML = '';
+        snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            const item = document.createElement('div');
+            item.className = "flex items-center justify-between bg-gray-50 border border-gray-100 rounded-2xl p-4";
+            item.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-pink-100 text-pink-500 rounded-full flex items-center justify-center">
+                        <i data-lucide="baby" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-bold text-gray-800">${data.fullName}</p>
+                        <p class="text-[10px] text-gray-400 uppercase font-bold">${data.disabilityType}</p>
+                    </div>
+                </div>
+                ${data.okuStatus ? '<span class="text-[8px] bg-pink-500 text-white px-2 py-0.5 rounded-full font-black">OKU</span>' : ''}
+            `;
+            listContainer.appendChild(item);
+        });
+        if (window.lucide) window.lucide.createIcons();
+    });
+}
+// Function to fetch and display children in the Edit Profile modal
+function setupEditDependentsListener(uid) {
+    const q = query(collection(db, "Dependents"), where("parentId", "==", uid)); //
+    onSnapshot(q, (snapshot) => { //
+        const listContainer = document.getElementById('edit-dependents-list');
+        if (!listContainer) return;
+
+        if (snapshot.empty) {
+            listContainer.innerHTML = '<p class="text-[10px] text-gray-400 italic ml-1">No dependents registered.</p>';
+            return;
+        }
+
+        listContainer.innerHTML = '';
+        snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            const id = docSnap.id;
+            const item = document.createElement('div');
+            item.className = "flex items-center justify-between bg-white border border-gray-200 rounded-xl p-3 shadow-sm";
+            item.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-pink-50 text-pink-500 rounded-full flex items-center justify-center">
+                        <i data-lucide="baby" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-bold text-gray-800">${data.fullName}</p>
+                        <p class="text-[10px] text-gray-400 uppercase">${data.disabilityType}</p>
+                    </div>
+                </div>
+                <button type="button" onclick="removeChildProfile('${id}', '${data.fullName}')" class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+            `;
+            listContainer.appendChild(item);
+        });
+        if (window.lucide) window.lucide.createIcons();
     });
 }
 
@@ -247,13 +363,19 @@ function setupDependentsListener(uid) {
         const container = document.getElementById('dependents-container');
         const countDisplay = document.getElementById('child-count');
         const trigger = document.getElementById('add-child-trigger');
+
         if (!container) return;
+
+        // Remove old cards to prevent duplicates during real-time updates
         container.querySelectorAll('.child-card').forEach(c => c.remove());
+
         dependentCount = snapshot.size;
         if (countDisplay) countDisplay.innerText = `${dependentCount}/5`;
+
         snapshot.forEach((docSnap) => {
             const data = docSnap.data();
-            const age = calculateAge(data.dateOfBirth);
+            const age = calculateAge(data.dateOfBirth); // Uses existing age helper
+
             const card = document.createElement('div');
             card.className = "child-card scroll-item bg-white border border-pink-100 p-5 rounded-[2rem] flex flex-col items-center justify-center text-center shadow-sm relative";
             card.innerHTML = `
@@ -267,34 +389,51 @@ function setupDependentsListener(uid) {
                 <button onclick="bookForChild('${data.fullName}', '${docSnap.id}')" class="mt-3 py-2 px-4 bg-pink-50 rounded-full text-[10px] font-black text-pink-500 flex items-center gap-1 hover:bg-pink-100">
                     Book Now <i data-lucide="chevron-right" class="w-3 h-3"></i>
                 </button>`;
+
+            // Insert before the "Add Child" button
             container.insertBefore(card, trigger);
         });
+
+        // Hide add button if limit reached
         if (trigger) trigger.style.display = dependentCount >= 5 ? 'none' : 'flex';
         if (window.lucide) window.lucide.createIcons();
     });
 }
 
+// Locate this section in assets/js/dashboard.js
+// Locate this section in assets/js/dashboard.js
 const addChildForm = document.getElementById('add-child-form');
 if (addChildForm) {
     addChildForm.onsubmit = async (e) => {
         e.preventDefault();
         const saveBtn = e.target.querySelector('button');
+        const originalText = saveBtn.innerText;
+
         saveBtn.innerText = "Saving...";
         saveBtn.disabled = true;
+
         try {
+            // This pushes data to the "Dependents" collection
             await addDoc(collection(db, "Dependents"), {
-                parentId: auth.currentUser.uid,
-                fullName: document.getElementById('child-name').value.trim(),
-                dateOfBirth: document.getElementById('child-dob').value,
-                disabilityType: document.getElementById('child-disability').value,
-                okuStatus: document.getElementById('child-oku-status').checked,
-                specialInstructions: document.getElementById('child-notes').value.trim(),
-                createdAt: new Date()
+                parentId: auth.currentUser.uid, // Links the child to the logged-in user
+                fullName: document.getElementById('child-name').value.trim(), //
+                dateOfBirth: document.getElementById('child-dob').value, // Matches "2020-10-03" format
+                disabilityType: document.getElementById('child-disability').value, // Matches "Autism" etc.
+                okuStatus: document.getElementById('child-oku-status').checked, // Boolean true/false
+                specialInstructions: document.getElementById('child-notes').value.trim(), // e.g., "Afraid of loud noises"
+                createdAt: new Date() // Firestore Timestamp
             });
+
+            alert("Child profile created successfully!");
             closeAddChildModal();
             e.target.reset();
-        } catch (err) { console.error("Error adding child:", err); }
-        finally { saveBtn.innerText = "Save Child Profile"; saveBtn.disabled = false; }
+        } catch (err) {
+            console.error("Error adding child to Firestore:", err);
+            alert("Failed to create child profile. Please try again.");
+        } finally {
+            saveBtn.innerText = originalText;
+            saveBtn.disabled = false;
+        }
     };
 }
 
@@ -329,17 +468,17 @@ window.openDoctorPopup = async () => {
 window.closeDoctorPopup = () => document.getElementById('doctor-popup').classList.add('hidden');
 
 // --- ANALYTICS LOGIC ---
+// Locate or add this helper function in assets/js/dashboard.js
 function calculateAge(dobString) {
-    if (!dobString) return null;
-    let parts;
-    if (dobString.includes('/')) {
-        parts = dobString.split('/').map(Number);
-        const birthDate = new Date(parts[2], parts[1] - 1, parts[0]);
-        return new Date().getFullYear() - birthDate.getFullYear();
-    } else {
-        const birthDate = new Date(dobString);
-        return new Date().getFullYear() - birthDate.getFullYear();
+    if (!dobString) return "0";
+    const birthDate = new Date(dobString);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
     }
+    return age >= 0 ? age : 0;
 }
 
 async function loadAnalyticalReport() {
@@ -481,8 +620,9 @@ onAuthStateChanged(auth, async (user) => {
         // Initialize Listeners
         setupProfileListener(user.uid);
         setupStatsListeners(user.uid);
-        setupDependentsListener(user.uid);
-
+        setupDependentsListener(user.uid);      // For the Dashboard scroll
+        setupProfileDependentsList(user.uid);
+        setupEditDependentsListener(user.uid);  // For the Profile view modal
         // Run Checks
         await loadAnalyticalReport();
         await checkCancelledAppointments(user.uid); // <--- ADDED HERE
