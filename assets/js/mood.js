@@ -11,11 +11,11 @@ slider.oninput = function () {
     valText.innerText = val + "%";
 
     if (val <= 50) {
-        ring.style.borderColor = "#FBBF24"; // Yellow
+        ring.style.borderColor = "#FBBF24";
         descText.innerText = "Neutral";
         descText.style.color = "#D97706";
     } else {
-        ring.style.borderColor = "#009688"; // Teal
+        ring.style.borderColor = "#009688";
         descText.innerText = "Happy";
         descText.style.color = "#009688";
     }
@@ -30,7 +30,7 @@ saveBtn.onclick = async () => {
             moodScore: parseInt(slider.value),
             createdAt: new Date()
         });
-        alert("Mood updated!");
+        alert("Mood updated!"); //
         window.location.href = 'dashboard.html';
     } catch (e) {
         console.error(e);

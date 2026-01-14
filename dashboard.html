@@ -239,7 +239,7 @@
             <div class="pt-4 px-1">
                 <div class="scroll-container no-scrollbar gap-4 pb-4">
                     <div class="scroll-item interactive-card bg-white p-5 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col items-center justify-center cursor-pointer"
-                        onclick="window.location.href='health.html'">
+                        onclick="openHealthModal()">
                         <i data-lucide="activity" class="w-12 h-12 bg-blue-50 text-blue-500 p-3 rounded-full mb-3"></i>
                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">My Health</p>
                         <div class="text-center mt-1">
@@ -253,7 +253,7 @@
                     </div>
 
                     <div class="scroll-item interactive-card bg-white p-5 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col items-center justify-center cursor-pointer"
-                        onclick="window.location.href='mood.html'">
+                         onclick="openMoodModal()">
                         <div id="dash-mood-ring-container"
                             class="w-16 h-16 rounded-full flex items-center justify-center mb-2 relative transition-all duration-500"
                             style="background: conic-gradient(#f3f4f6 0%, #f3f4f6 0%);">
@@ -483,6 +483,57 @@
                 <div id="doctor-popup-list" class="flex-1 overflow-y-auto p-6 space-y-4"></div>
             </div>
         </div>
+<div id="health-modal" class="absolute inset-0 bg-black/50 backdrop-blur-sm z-[150] hidden flex flex-col justify-end">
+    <div class="bg-white rounded-t-[2.5rem] h-[65%] flex flex-col overflow-hidden animate-slide-up">
+        <div class="px-6 pt-8 pb-4 flex justify-between items-center border-b border-gray-50">
+            <h2 class="text-xl font-bold text-gray-900">Health Stats</h2>
+            <button onclick="closeHealthModal()" class="p-2 bg-gray-100 rounded-full">
+                <i data-lucide="x" class="w-5 h-5 text-gray-600"></i>
+            </button>
+        </div>
+        <div class="p-6 space-y-4">
+            <div class="bg-gray-50 p-6 rounded-3xl border border-gray-100">
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-widest block mb-2">Height (cm)</label>
+                <input type="number" id="height-input-modal"
+                    class="w-full text-2xl font-bold outline-none bg-transparent" placeholder="170">
+            </div>
+            <div class="bg-gray-50 p-6 rounded-3xl border border-gray-100">
+                <label class="text-xs font-bold text-gray-400 uppercase tracking-widest block mb-2">Weight (kg)</label>
+                <input type="number" id="weight-input-modal"
+                    class="w-full text-2xl font-bold outline-none bg-transparent" placeholder="65">
+            </div>
+            <button id="save-health-btn-modal"
+                class="w-full bg-[#009688] text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all">
+                Save Statistics
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="mood-modal" class="absolute inset-0 bg-black/50 backdrop-blur-sm z-[150] hidden flex flex-col justify-end">
+    <div class="bg-white rounded-t-[2.5rem] h-[75%] flex flex-col overflow-hidden animate-slide-up">
+        <div class="px-6 pt-8 pb-4 flex justify-between items-center border-b border-gray-50">
+            <h2 class="text-xl font-bold text-gray-900">My Mood Today</h2>
+            <button onclick="closeMoodModal()" class="p-2 bg-gray-100 rounded-full">
+                <i data-lucide="x" class="w-5 h-5 text-gray-600"></i>
+            </button>
+        </div>
+        <div class="p-8 text-center">
+            <div id="mood-ring-modal"
+                class="w-40 h-40 rounded-full border-[12px] border-yellow-400 mx-auto flex flex-col items-center justify-center mb-8 transition-colors duration-500">
+                <span id="mood-value-modal" class="text-3xl font-black text-gray-800">50%</span>
+            </div>
+            <input type="range" id="mood-slider-modal" min="10" max="100" value="50"
+                class="w-full h-2 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-[#009688] mb-6">
+            <p id="mood-desc-modal" class="text-sm font-bold text-yellow-600 mb-6">Neutral</p>
+            <button id="save-mood-btn-modal"
+                class="w-full bg-[#009688] text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all">
+                Update Mood
+            </button>
+        </div>
+    </div>
+</div>
+
     </div>
 
     <script>lucide.createIcons();</script>

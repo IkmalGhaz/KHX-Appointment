@@ -40,33 +40,27 @@
 <body class="flex items-center justify-center min-h-screen">
     <div class="mobile-frame p-6">
         <div class="flex items-center gap-3 mb-8">
-            <a href="dashboard.html" class="p-2 -ml-2 rounded-full hover:bg-gray-100 text-gray-600">
-                <i data-lucide="arrow-left" class="w-6 h-6"></i>
-            </a>
+            <a href="dashboard.html" class="p-2 -ml-2 rounded-full hover:bg-gray-100 text-gray-600"><i
+                    data-lucide="arrow-left" class="w-6 h-6"></i></a>
             <h1 class="text-2xl font-bold text-gray-900">My Mood Today</h1>
         </div>
-
         <div class="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 text-center">
             <div id="mood-ring"
                 class="w-40 h-40 rounded-full border-[12px] border-yellow-400 mx-auto flex flex-col items-center justify-center mb-8 transition-colors duration-500">
                 <span id="mood-value" class="text-3xl font-black text-gray-800">50%</span>
                 <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Mood Scale</p>
             </div>
-
             <div class="space-y-6">
                 <input type="range" id="mood-slider" min="10" max="100" value="50"
                     class="w-full h-2 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-[#009688]">
-
                 <div class="flex justify-between px-2">
                     <span class="text-xs font-bold text-gray-400 uppercase">10</span>
                     <span id="mood-desc" class="text-sm font-bold text-yellow-600">Neutral</span>
                     <span class="text-xs font-bold text-gray-400 uppercase">100</span>
                 </div>
-
                 <button id="save-mood-btn"
-                    class="w-full bg-[#009688] text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all mt-4">
-                    Update Mood
-                </button>
+                    class="w-full bg-[#009688] text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all mt-4">Update
+                    Mood</button>
             </div>
         </div>
     </div>

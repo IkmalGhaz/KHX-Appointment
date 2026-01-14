@@ -1,4 +1,4 @@
-import { auth, db, onAuthStateChanged, collection, addDoc } from './firebase-config.js';
+import { auth, db, collection, addDoc } from './firebase-config.js';
 
 const heightInput = document.getElementById('height-input');
 const weightInput = document.getElementById('weight-input');
@@ -20,7 +20,7 @@ saveBtn.onclick = async () => {
             weight: w,
             createdAt: new Date()
         });
-        alert("Health stats saved!");
+        alert("Health stats updated!"); //
         window.location.href = 'dashboard.html';
     } catch (e) {
         console.error(e);

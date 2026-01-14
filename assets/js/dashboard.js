@@ -49,6 +49,77 @@ if (viewAptBtn) {
 }
 if (closeAptModalBtn) { closeAptModalBtn.onclick = () => aptModal.classList.add('hidden'); }
 
+// Modal Visibility Helpers for Health/Mood
+window.openHealthModal = () => document.getElementById('health-modal').classList.remove('hidden');
+window.closeHealthModal = () => document.getElementById('health-modal').classList.add('hidden');
+window.openMoodModal = () => document.getElementById('mood-modal').classList.remove('hidden');
+window.closeMoodModal = () => document.getElementById('mood-modal').classList.add('hidden');
+
+// --- SAVING LOGIC (Anytime update from Dashboard Modals) ---
+
+// Health Save Logic
+document.getElementById('save-health-btn-modal').onclick = async () => {
+    const hInput = document.getElementById('height-input-modal');
+    const wInput = document.getElementById('weight-input-modal');
+    const h = parseFloat(hInput.value);
+    const w = parseFloat(wInput.value);
+
+    if (!h || !w) return alert("Please fill in both fields");
+
+    try {
+        await addDoc(collection(db, "HealthTracker"), {
+            patientId: auth.currentUser.uid,
+            height: h,
+            weight: w,
+            createdAt: new Date()
+        });
+        alert("Health stats updated!");
+        closeHealthModal();
+        hInput.value = "";
+        wInput.value = "";
+    } catch (e) {
+        console.error("Error saving health:", e);
+        alert("Error saving data.");
+    }
+};
+
+// Mood Slider Logic
+const moodSliderModal = document.getElementById('mood-slider-modal');
+if (moodSliderModal) {
+    moodSliderModal.oninput = function () {
+        const val = parseInt(this.value);
+        document.getElementById('mood-value-modal').innerText = val + "%";
+        const ring = document.getElementById('mood-ring-modal');
+        const desc = document.getElementById('mood-desc-modal');
+
+        if (val <= 50) {
+            ring.style.borderColor = "#FBBF24";
+            desc.innerText = "Neutral";
+            desc.style.color = "#D97706";
+        } else {
+            ring.style.borderColor = "#009688";
+            desc.innerText = "Happy";
+            desc.style.color = "#009688";
+        }
+    };
+}
+
+// Mood Save Logic
+document.getElementById('save-mood-btn-modal').onclick = async () => {
+    try {
+        await addDoc(collection(db, "MoodTracker"), {
+            patientId: auth.currentUser.uid,
+            moodScore: parseInt(moodSliderModal.value),
+            createdAt: new Date()
+        });
+        alert("Mood updated!");
+        closeMoodModal();
+    } catch (e) {
+        console.error("Error saving mood:", e);
+        alert("Error updating mood.");
+    }
+};
+
 // --- PROFILE REAL-TIME SYNC ---
 function setupProfileListener(uid) {
     const q = query(collection(db, "Users"), where("firebaseUid", "==", uid));
@@ -109,45 +180,58 @@ if (editForm) {
 
 // --- LIVE STATS SYNC ---
 function setupStatsListeners(uid) {
+    // 1. Health Sync
     const healthQ = query(collection(db, "HealthTracker"), where("patientId", "==", uid));
     onSnapshot(healthQ, (snapshot) => {
         if (!snapshot.empty) {
-            const sortedDocs = snapshot.docs.sort((a, b) => b.data().createdAt - a.data().createdAt);
+            // FIX: Robust Timestamp sorting
+            const sortedDocs = snapshot.docs.sort((a, b) => {
+                const timeA = a.data().createdAt?.seconds || 0;
+                const timeB = b.data().createdAt?.seconds || 0;
+                return timeB - timeA;
+            });
             const latest = sortedDocs[0].data();
-            const heightCm = latest.height;
-            const weightKg = latest.weight;
-            document.getElementById('dash-height').innerText = `${heightCm} cm`;
-            document.getElementById('dash-weight').innerText = `${weightKg} kg`;
-            if (heightCm > 0 && weightKg > 0) {
-                const bmi = (weightKg / ((heightCm / 100) ** 2)).toFixed(1);
-                document.getElementById('dash-bmi-val').innerText = `BMI: ${bmi}`;
-                const bmiStatus = document.getElementById('dash-bmi-status');
-                if (bmi < 18.5) bmiStatus.innerText = "Underweight";
-                else if (bmi < 24.9) bmiStatus.innerText = "Normal";
-                else if (bmi < 29.9) bmiStatus.innerText = "Overweight";
-                else bmiStatus.innerText = "Obese";
+
+            // Ensure elements exist before updating
+            const hEl = document.getElementById('dash-height');
+            const wEl = document.getElementById('dash-weight');
+            if (hEl) hEl.innerText = `${latest.height} cm`;
+            if (wEl) wEl.innerText = `${latest.weight} kg`;
+
+            if (latest.height > 0 && latest.weight > 0) {
+                const bmi = (latest.weight / ((latest.height / 100) ** 2)).toFixed(1);
+                const bmiValEl = document.getElementById('dash-bmi-val');
+                if (bmiValEl) bmiValEl.innerText = `BMI: ${bmi}`;
             }
         }
     });
+
+    // 2. Mood Sync
     const moodQ = query(collection(db, "MoodTracker"), where("patientId", "==", uid));
     onSnapshot(moodQ, (snapshot) => {
         if (!snapshot.empty) {
-            const sortedDocs = snapshot.docs.sort((a, b) => b.data().createdAt - a.data().createdAt);
+            // FIX: Robust Timestamp sorting
+            const sortedDocs = snapshot.docs.sort((a, b) => {
+                const timeA = a.data().createdAt?.seconds || 0;
+                const timeB = b.data().createdAt?.seconds || 0;
+                return timeB - timeA;
+            });
             const latest = sortedDocs[0].data();
-            const val = latest.moodScore;
-            document.getElementById('dash-mood-val').innerText = val + "%";
+            const val = Number(latest.moodScore);
+
+            const valText = document.getElementById('dash-mood-val');
+            if (valText) valText.innerText = val + "%";
+
             const ringContainer = document.getElementById('dash-mood-ring-container');
-            const ringColor = val <= 50 ? "#facc15" : "#22c55e";
-            ringContainer.style.background = `conic-gradient(${ringColor} ${val}%, #f3f4f6 ${val}%)`;
-            const statusText = document.getElementById('dash-mood-status');
-            if (val <= 30) statusText.innerText = "Feeling Low";
-            else if (val <= 60) statusText.innerText = "Neutral";
-            else statusText.innerText = "Feeling Great";
+            if (ringContainer) {
+                const ringColor = val <= 50 ? "#facc15" : "#009688";
+                ringContainer.style.background = `conic-gradient(${ringColor} ${val}%, #f3f4f6 ${val}%)`;
+            }
         }
     });
 }
 
-// --- DEPENDENTS (CHILD FEATURE) LOGIC ---
+// --- DEPENDENTS LOGIC ---
 let dependentCount = 0;
 window.openAddChildModal = () => {
     if (dependentCount >= 5) return alert("Maximum 5 child profiles allowed.");
@@ -161,9 +245,10 @@ function setupDependentsListener(uid) {
         const container = document.getElementById('dependents-container');
         const countDisplay = document.getElementById('child-count');
         const trigger = document.getElementById('add-child-trigger');
+        if (!container) return;
         container.querySelectorAll('.child-card').forEach(c => c.remove());
         dependentCount = snapshot.size;
-        countDisplay.innerText = `${dependentCount}/5`;
+        if (countDisplay) countDisplay.innerText = `${dependentCount}/5`;
         snapshot.forEach((docSnap) => {
             const data = docSnap.data();
             const age = calculateAge(data.dateOfBirth);
@@ -182,31 +267,34 @@ function setupDependentsListener(uid) {
                 </button>`;
             container.insertBefore(card, trigger);
         });
-        trigger.style.display = dependentCount >= 5 ? 'none' : 'flex';
+        if (trigger) trigger.style.display = dependentCount >= 5 ? 'none' : 'flex';
         if (window.lucide) window.lucide.createIcons();
     });
 }
 
-document.getElementById('add-child-form').onsubmit = async (e) => {
-    e.preventDefault();
-    const saveBtn = e.target.querySelector('button');
-    saveBtn.innerText = "Saving...";
-    saveBtn.disabled = true;
-    try {
-        await addDoc(collection(db, "Dependents"), {
-            parentId: auth.currentUser.uid,
-            fullName: document.getElementById('child-name').value.trim(),
-            dateOfBirth: document.getElementById('child-dob').value,
-            disabilityType: document.getElementById('child-disability').value,
-            okuStatus: document.getElementById('child-oku-status').checked,
-            specialInstructions: document.getElementById('child-notes').value.trim(),
-            createdAt: new Date()
-        });
-        closeAddChildModal();
-        e.target.reset();
-    } catch (err) { console.error("Error adding child:", err); }
-    finally { saveBtn.innerText = "Save Child Profile"; saveBtn.disabled = false; }
-};
+const addChildForm = document.getElementById('add-child-form');
+if (addChildForm) {
+    addChildForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const saveBtn = e.target.querySelector('button');
+        saveBtn.innerText = "Saving...";
+        saveBtn.disabled = true;
+        try {
+            await addDoc(collection(db, "Dependents"), {
+                parentId: auth.currentUser.uid,
+                fullName: document.getElementById('child-name').value.trim(),
+                dateOfBirth: document.getElementById('child-dob').value,
+                disabilityType: document.getElementById('child-disability').value,
+                okuStatus: document.getElementById('child-oku-status').checked,
+                specialInstructions: document.getElementById('child-notes').value.trim(),
+                createdAt: new Date()
+            });
+            closeAddChildModal();
+            e.target.reset();
+        } catch (err) { console.error("Error adding child:", err); }
+        finally { saveBtn.innerText = "Save Child Profile"; saveBtn.disabled = false; }
+    };
+}
 
 window.bookForChild = (name, id) => {
     localStorage.setItem('bookingForDependent', 'true');
@@ -219,6 +307,7 @@ window.bookForChild = (name, id) => {
 window.openDoctorPopup = async () => {
     const popup = document.getElementById('doctor-popup');
     const list = document.getElementById('doctor-popup-list');
+    if (!popup || !list) return;
     popup.classList.remove('hidden');
     list.innerHTML = '<div class="text-center py-10 animate-pulse">Loading Specialists...</div>';
     try {
@@ -242,14 +331,12 @@ function calculateAge(dobString) {
     if (!dobString) return null;
     let parts;
     if (dobString.includes('/')) {
-        parts = dobString.split('/').map(Number); // DD/MM/YYYY
+        parts = dobString.split('/').map(Number);
         const birthDate = new Date(parts[2], parts[1] - 1, parts[0]);
-        let age = new Date().getFullYear() - birthDate.getFullYear();
-        return age;
+        return new Date().getFullYear() - birthDate.getFullYear();
     } else {
-        const birthDate = new Date(dobString); // YYYY-MM-DD
-        let age = new Date().getFullYear() - birthDate.getFullYear();
-        return age;
+        const birthDate = new Date(dobString);
+        return new Date().getFullYear() - birthDate.getFullYear();
     }
 }
 
@@ -281,8 +368,10 @@ async function loadAnalyticalReport() {
                 if (data.doctorName) doctorCounts[data.doctorName] = (doctorCounts[data.doctorName] || 0) + 1;
             }
         });
-        document.getElementById('weekly-count').innerText = weeklyVisits;
-        document.getElementById('monthly-count').innerText = monthlyVisits;
+        const weeklyCountEl = document.getElementById('weekly-count');
+        const monthlyCountEl = document.getElementById('monthly-count');
+        if (weeklyCountEl) weeklyCountEl.innerText = weeklyVisits;
+        if (monthlyCountEl) monthlyCountEl.innerText = monthlyVisits;
         renderCharts(ageGroups, doctorCounts);
     } catch (error) { console.error("Analytical Report Error:", error); }
 }
@@ -326,9 +415,14 @@ if (profileLogoutBtn) {
 // --- AUTH OBSERVER ---
 onAuthStateChanged(auth, async (user) => {
     if (user) {
+        // Ensure dashboard content is visible immediately
+        const dashboardContent = document.querySelector('.flex-1');
+        if (dashboardContent) dashboardContent.classList.remove('hidden');
+
         setupProfileListener(user.uid);
         setupStatsListeners(user.uid);
         setupDependentsListener(user.uid);
+
         await loadAnalyticalReport();
         if (typeof window.loadAppointments === 'function') window.loadAppointments(user.uid);
         lucide.createIcons();
