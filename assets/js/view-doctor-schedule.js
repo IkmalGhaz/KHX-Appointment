@@ -23,49 +23,42 @@ async function loadAppointments(doctorId) {
         console.log(`Searching for bookings where doctorId == "${doctorId}"`);
 
         // 1. First, try to fetch ANY booking to test connection
-        // This helps us know if it's a Permission error or a Data Match error
-        try {
-            const testQ = query(collection(db, "bookings"), where("doctorId", "==", doctorId));
-            const snapshot = await getDocs(testQ);
-            
-            console.log(`Found ${snapshot.size} appointments for this doctor.`);
+        const testQ = query(collection(db, "bookings"), where("doctorId", "==", doctorId));
+        const snapshot = await getDocs(testQ);
+        
+        console.log(`Found ${snapshot.size} appointments for this doctor.`);
 
-            if (snapshot.empty) {
-                renderEmptyState(`ID: ${doctorId}`);
-                return;
+        if (snapshot.empty) {
+            renderEmptyState(`ID: ${doctorId}`);
+            return;
+        }
+
+        // 2. Process Data
+        const promises = snapshot.docs.map(async (bookingDoc) => {
+            const data = bookingDoc.data();
+            let patientName = "Unknown Patient";
+            
+            if (data.patientId) {
+                try {
+                    const patientSnap = await getDoc(doc(db, "Users", data.patientId));
+                    if (patientSnap.exists()) {
+                        patientName = patientSnap.data().fullName || "Unknown";
+                    }
+                } catch (e) { console.warn("Patient fetch error", e); }
             }
 
-            // 2. Process Data
-            const promises = snapshot.docs.map(async (bookingDoc) => {
-                const data = bookingDoc.data();
-                let patientName = "Unknown Patient";
-                
-                if (data.patientId) {
-                    try {
-                        const patientSnap = await getDoc(doc(db, "Users", data.patientId));
-                        if (patientSnap.exists()) {
-                            patientName = patientSnap.data().fullName || "Unknown";
-                        }
-                    } catch (e) { console.warn("Patient fetch error", e); }
-                }
+            return {
+                id: bookingDoc.id,
+                ...data,
+                patientName
+            };
+        });
 
-                return {
-                    id: bookingDoc.id,
-                    ...data,
-                    patientName
-                };
-            });
-
-            allAppointments = await Promise.all(promises);
-            
-            // Sort by Date
-            allAppointments.sort((a, b) => new Date(a.date) - new Date(b.date));
-            renderList(allAppointments);
-
-        } catch (queryError) {
-            console.error("QUERY ERROR:", queryError);
-            throw queryError; // Pass to main catch
-        }
+        allAppointments = await Promise.all(promises);
+        
+        // Sort by Date
+        allAppointments.sort((a, b) => new Date(a.date) - new Date(b.date));
+        renderList(allAppointments);
 
     } catch (error) {
         console.error("CRITICAL ERROR:", error);
@@ -90,10 +83,7 @@ function renderList(data) {
 
     // Show Upcoming, Pending, and Pending Approval
     const active = data.filter(apt => 
-        // 1. Must NOT be cancelled
         apt.status !== 'Cancelled' && 
-        
-        // 2. Must meet one of these conditions
         (
             apt.status === 'Upcoming' || 
             apt.status === 'Pending Approval' || 
@@ -108,33 +98,50 @@ function renderList(data) {
     }
 
     active.forEach(apt => {
-        const dateStr = formatCustomDate(apt.date, apt.time);
+        // --- NEW: EXTRACT DAY & MONTH ---
+        // Assumes apt.date format is "15 January 2026"
+        let displayDay = "00";
+        let displayMonth = "DEC";
+
+        if (apt.date) {
+            const parts = apt.date.split(' '); 
+            if (parts.length >= 2) {
+                displayDay = parts[0]; // "15"
+                displayMonth = parts[1].substring(0, 3).toUpperCase(); // "JAN"
+            }
+        }
+        // --------------------------------
+
+        const formattedTime = formatTimeOnly(apt.time); // Helper to get "2:00 PM"
 
         const card = document.createElement('div');
-        card.className = "bg-white p-5 rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] fade-in relative mb-3";
+        card.className = "bg-white p-4 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4 transition-all hover:shadow-md mb-3";
         
         card.innerHTML = `
-            <div class="flex justify-between items-start mb-2">
-                <h3 class="font-bold text-gray-900 text-base tracking-tight">${apt.patientName}</h3>
-                <button onclick="openMenu('${apt.id}')" class="text-gray-400 hover:text-gray-600 p-1 -mr-2">
-                    <i data-lucide="more-horizontal" class="w-6 h-6"></i>
-                </button>
+            <div class="w-16 h-16 rounded-2xl bg-[#e0f2f1] flex flex-col items-center justify-center text-[#009688] shrink-0 shadow-sm">
+                <span class="text-xl font-bold leading-none">${displayDay}</span>
+                <span class="text-[10px] font-bold mt-1 tracking-wider">${displayMonth}</span>
             </div>
-            
-            <div class="space-y-2">
-                <div class="flex items-center gap-3 text-gray-500">
-                    <i data-lucide="clock" class="w-4 h-4 shrink-0"></i>
-                    <span class="text-xs font-medium">${dateStr}</span>
+
+            <div class="flex-1 min-w-0">
+                <div class="flex justify-between items-start mb-1">
+                    <h3 class="font-bold text-gray-900 truncate pr-2 text-base">${apt.patientName}</h3>
+                    <button onclick="openMenu('${apt.id}')" class="text-gray-400 hover:text-gray-600 p-1">
+                        <i data-lucide="more-vertical" class="w-5 h-5"></i>
+                    </button>
                 </div>
                 
-                <div class="flex items-center gap-3 text-gray-500">
-                    <i data-lucide="heart" class="w-4 h-4 shrink-0"></i>
-                    <span class="text-xs font-medium">${apt.serviceName || 'Consultation'}</span>
-                </div>
-
-                <div class="flex items-center gap-2 mt-2">
-                     <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 uppercase">${apt.status}</span>
-                     ${apt.paymentStatus === 'Paid' ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-green-50 text-green-600 border border-green-100 uppercase">PAID</span>' : ''}
+                <p class="text-sm text-gray-500 mb-1 truncate">${apt.serviceName || 'Consultation'}</p>
+                
+                <div class="flex items-center gap-3 mt-1">
+                    <div class="flex items-center gap-1 text-xs text-gray-400 font-medium bg-gray-50 px-2 py-1 rounded-md">
+                        <i data-lucide="clock" class="w-3 h-3"></i>
+                        <span>${formattedTime}</span>
+                    </div>
+                    
+                    ${apt.status ? 
+                        `<span class="text-[10px] font-bold px-2 py-1 rounded bg-blue-50 text-blue-600 border border-blue-100 uppercase">${apt.status}</span>` 
+                        : ''}
                 </div>
             </div>
         `;
@@ -166,28 +173,16 @@ searchInput.addEventListener('input', (e) => {
     renderList(filtered);
 });
 
-function formatCustomDate(dateString, timeString) {
-    if (!dateString || !timeString) return "Date pending";
+// Helper to format just the time (e.g. "14:00" -> "2:00 PM")
+function formatTimeOnly(timeString) {
+    if(!timeString) return "--:--";
     try {
-        const dateParts = dateString.split(' '); 
-        if(dateParts.length < 3) return dateString;
-        
-        const day = dateParts[0];
-        const month = dateParts[1];
-        const year = dateParts[2];
-        const dateObj = new Date(`${month} ${day}, ${year}`);
-        const weekday = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
-        
         const [hrs, mins] = timeString.split(':');
         let h = parseInt(hrs);
-        const ampm = h >= 12 ? 'pm' : 'am';
+        const ampm = h >= 12 ? 'PM' : 'AM';
         const h12 = h % 12 || 12;
-        let endH = h + 1;
-        const endAmpm = endH >= 12 ? 'pm' : 'am';
-        const endH12 = endH % 12 || 12;
-
-        return `${h12}:${mins}${ampm} - ${endH12}:${mins}${endAmpm} (${day}th, ${weekday})`;
-    } catch(e) { return `${dateString} ${timeString}`; }
+        return `${h12}:${mins} ${ampm}`;
+    } catch(e) { return timeString; }
 }
 
 // --- 5. Action Sheet Logic ---
@@ -207,11 +202,23 @@ document.getElementById('btn-cancel').onclick = () => updateStatus('Cancelled');
 async function updateStatus(status) {
     if(!selectedAptId) return;
     try {
+        // Change button text to show loading
+        const btnId = status === 'Completed' ? 'btn-complete' : 'btn-cancel';
+        const btn = document.getElementById(btnId);
+        const originalText = btn.innerText;
+        btn.innerText = "Updating...";
+
         await updateDoc(doc(db, "bookings", selectedAptId), { status: status });
+        
+        // Update local data
         const idx = allAppointments.findIndex(a => a.id === selectedAptId);
         if(idx > -1) allAppointments[idx].status = status;
+        
         closeActionSheet();
         renderList(allAppointments); 
+        
+        // Reset button text
+        btn.innerText = originalText;
     } catch(e) {
         alert("Update failed: " + e.message);
     }
