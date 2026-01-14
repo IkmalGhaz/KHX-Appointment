@@ -32,7 +32,7 @@ async function loadAppointments(doctorId) {
         const promises = snapshot.docs.map(async (bookingDoc) => {
             const data = bookingDoc.data();
             let patientName = "Unknown Patient";
-            
+
             if (data.patientId) {
                 try {
                     const patientSnap = await getDoc(doc(db, "Users", data.patientId));
@@ -50,20 +50,16 @@ async function loadAppointments(doctorId) {
         });
 
         allAppointments = await Promise.all(promises);
-        
-        // --- IMPROVED SORTING ---
-        // This fixes the "Split January" issue by handling invalid dates safely
+
+        // Sorting logic to handle date ordering
         allAppointments.sort((a, b) => {
             const dateA = new Date(a.date);
             const dateB = new Date(b.date);
-            
-            // If date is invalid (NaN), push it to the end of the list
             if (isNaN(dateA)) return 1;
             if (isNaN(dateB)) return -1;
-            
             return dateA - dateB;
         });
-        
+
         renderList(allAppointments);
 
     } catch (error) {
@@ -76,9 +72,9 @@ async function loadAppointments(doctorId) {
 function renderList(data) {
     aptList.innerHTML = '';
 
-    // FIX: Filter out Cancelled items so they don't appear in the view
-    const active = data.filter(apt => 
-        apt.status !== 'Cancelled' && 
+    // Filter out Cancelled or Archived items
+    const active = data.filter(apt =>
+        apt.status !== 'Cancelled' &&
         apt.status !== 'Archived'
     );
 
@@ -87,7 +83,7 @@ function renderList(data) {
         return;
     }
 
-    let lastMonthYear = ""; 
+    let lastMonthYear = "";
 
     active.forEach(apt => {
         let displayDay = "00";
@@ -95,15 +91,15 @@ function renderList(data) {
         let fullMonthYear = "Unknown Date";
 
         if (apt.date) {
-            const parts = apt.date.split(' '); 
+            const parts = apt.date.split(' ');
             if (parts.length >= 3) {
-                displayDay = parts[0]; 
-                displayMonth = parts[1].substring(0, 3).toUpperCase(); 
+                displayDay = parts[0];
+                displayMonth = parts[1].substring(0, 3).toUpperCase();
                 fullMonthYear = `${parts[1]} ${parts[2]}`;
             }
         }
 
-        // Header Logic
+        // Section Headers
         if (fullMonthYear !== lastMonthYear) {
             const header = document.createElement('div');
             header.className = "sticky top-0 z-10 bg-[#f8fafc]/95 backdrop-blur-sm py-3 mb-2 mt-4 first:mt-0 flex items-center gap-2 border-b border-gray-200/50";
@@ -116,15 +112,22 @@ function renderList(data) {
         }
 
         const formattedTime = formatTimeOnly(apt.time);
-        
-        // Badge Colors
+
+        // --- NORMALIZATION LOGIC ---
+        // Treat 'Pending Approval' and 'Pending' as 'Upcoming' for UI display
+        let displayStatus = apt.status;
         let badgeClass = "bg-blue-50 text-blue-600 border-blue-100";
-        if (apt.status === 'Completed') badgeClass = "bg-green-50 text-green-600 border-green-100";
-        if (apt.status === 'Pending Approval') badgeClass = "bg-orange-50 text-orange-600 border-orange-100";
+
+        if (displayStatus === 'Pending Approval' || displayStatus === 'Pending' || displayStatus === 'Upcoming') {
+            displayStatus = 'Upcoming';
+            badgeClass = "bg-green-50 text-green-600 border-green-100"; // Use green for upcoming visibility
+        } else if (displayStatus === 'Completed') {
+            badgeClass = "bg-green-50 text-green-600 border-green-100";
+        }
 
         const card = document.createElement('div');
         card.className = "bg-white p-4 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4 transition-all hover:shadow-md mb-3";
-        
+
         card.innerHTML = `
             <div class="w-16 h-16 rounded-2xl bg-[#e0f2f1] flex flex-col items-center justify-center text-[#009688] shrink-0 shadow-sm">
                 <span class="text-xl font-bold leading-none">${displayDay}</span>
@@ -147,17 +150,15 @@ function renderList(data) {
                         <span>${formattedTime}</span>
                     </div>
                     
-                    ${apt.status ? 
-                        `<span class="text-[10px] font-bold px-2 py-1 rounded border uppercase ${badgeClass}">${apt.status}</span>` 
-                        : ''}
+                    <span class="text-[10px] font-bold px-2 py-1 rounded border uppercase ${badgeClass}">${displayStatus}</span>
                 </div>
             </div>
         `;
-        
+
         aptList.appendChild(card);
     });
-    
-    if(window.lucide) window.lucide.createIcons();
+
+    if (window.lucide) window.lucide.createIcons();
 }
 
 // --- 4. Helpers & Search ---
@@ -169,14 +170,14 @@ function renderEmptyState(debugInfo = "") {
             <p class="text-[10px] text-gray-400 mt-2 font-mono">${debugInfo}</p>
         </div>
     `;
-    if(window.lucide) window.lucide.createIcons();
+    if (window.lucide) window.lucide.createIcons();
 }
 
 if (searchInput) {
     searchInput.addEventListener('input', (e) => {
         const term = e.target.value.toLowerCase();
-        const filtered = allAppointments.filter(apt => 
-            (apt.patientName && apt.patientName.toLowerCase().includes(term)) || 
+        const filtered = allAppointments.filter(apt =>
+            (apt.patientName && apt.patientName.toLowerCase().includes(term)) ||
             (apt.serviceName && apt.serviceName.toLowerCase().includes(term))
         );
         renderList(filtered);
@@ -184,14 +185,14 @@ if (searchInput) {
 }
 
 function formatTimeOnly(timeString) {
-    if(!timeString) return "--:--";
+    if (!timeString) return "--:--";
     try {
         const [hrs, mins] = timeString.split(':');
         let h = parseInt(hrs);
         const ampm = h >= 12 ? 'PM' : 'AM';
         const h12 = h % 12 || 12;
         return `${h12}:${mins} ${ampm}`;
-    } catch(e) { return timeString; }
+    } catch (e) { return timeString; }
 }
 
 // --- 5. Action Sheet Logic ---
@@ -205,51 +206,40 @@ window.closeActionSheet = () => {
     selectedAptId = null;
 };
 
-// FIX 3: Safety check before assigning onclick
-const btnComplete = document.getElementById('btn-complete');
 const btnCancel = document.getElementById('btn-cancel');
-
-if (btnComplete) btnComplete.onclick = () => updateStatus('Completed');
 if (btnCancel) btnCancel.onclick = () => updateStatus('Cancelled');
 
 async function updateStatus(status) {
-    if(!selectedAptId) return;
+    if (!selectedAptId) return;
     try {
-        // Find which button was clicked for UX feedback
-        const btnId = status === 'Completed' ? 'btn-complete' : 'btn-cancel';
-        const btn = document.getElementById(btnId);
+        const btn = document.getElementById('btn-cancel');
         let originalText = "";
-        
+
         if (btn) {
             originalText = btn.innerText;
             btn.innerText = "Updating...";
             btn.disabled = true;
         }
 
-        // 1. Update Firebase
         await updateDoc(doc(db, "bookings", selectedAptId), { status: status });
-        
-        // 2. Update Local Array (so we don't need to re-fetch)
+
         const idx = allAppointments.findIndex(a => a.id === selectedAptId);
-        if(idx > -1) allAppointments[idx].status = status;
-        
-        // 3. Reset UI
+        if (idx > -1) allAppointments[idx].status = status;
+
         closeActionSheet();
-        renderList(allAppointments); // Re-render to show changes
-        
+        renderList(allAppointments);
+
         if (btn) {
             btn.innerText = originalText;
             btn.disabled = false;
         }
 
-    } catch(e) {
+    } catch (e) {
         alert("Update failed: " + e.message);
-        const btnId = status === 'Completed' ? 'btn-complete' : 'btn-cancel';
-        const btn = document.getElementById(btnId);
+        const btn = document.getElementById('btn-cancel');
         if (btn) btn.disabled = false;
     }
 }
 
-// Global exposure
 window.openMenu = window.openMenu;
 window.closeActionSheet = window.closeActionSheet;

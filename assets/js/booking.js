@@ -65,13 +65,13 @@ function updateHeader(step) {
 // --- 2. LOAD SERVICES ---
 async function loadServices() {
     const container = document.getElementById('service-list');
-    if(!container) return;
+    if (!container) return;
     container.innerHTML = `<div class="animate-pulse bg-white p-5 rounded-2xl h-24 border border-gray-100 mb-3"></div>`;
-    
+
     try {
         const q = query(collection(db, "Services"));
         const snapshot = await getDocs(q);
-        container.innerHTML = ''; 
+        container.innerHTML = '';
 
         let services = [];
         if (snapshot.empty) {
@@ -86,6 +86,10 @@ async function loadServices() {
         services.forEach(data => {
             const card = document.createElement('div');
             card.className = "bg-white p-4 rounded-2xl cursor-pointer border border-transparent hover:border-[#009688] transition-all shadow-sm mb-3 group";
+
+            // ADJUSTMENT HERE: Check for 'desc' or 'description'
+            const serviceDescription = data.desc || data.description || "No description available.";
+
             card.innerHTML = `
                 <div class="flex items-start gap-4">
                     <div class="w-12 h-12 rounded-2xl bg-[#e0f2f1] flex items-center justify-center text-[#009688] shrink-0">
@@ -93,7 +97,7 @@ async function loadServices() {
                     </div>
                     <div class="flex-1">
                         <h3 class="font-bold text-[#004d40] text-lg leading-tight mb-1">${data.specialization || "Service"}</h3>
-                        <p class="text-xs text-gray-500 leading-relaxed mb-3">${data.desc || "Description"}</p>
+                        <p class="text-xs text-gray-500 leading-relaxed mb-3">${serviceDescription}</p>
                         <div class="flex items-center gap-4">
                             <span class="font-bold text-[#009688]">RM ${data.price}</span>
                             <div class="flex items-center gap-1 text-gray-400 text-xs">
@@ -104,7 +108,7 @@ async function loadServices() {
                     </div>
                 </div>
             `;
-            
+
             card.addEventListener('click', () => {
                 bookingData.serviceId = data.id;
                 bookingData.serviceName = data.specialization;
@@ -114,7 +118,7 @@ async function loadServices() {
             });
             container.appendChild(card);
         });
-        if(window.lucide) window.lucide.createIcons();
+        if (window.lucide) window.lucide.createIcons();
     } catch (e) {
         console.error(e);
         container.innerHTML = `<p class="text-red-500 text-center">Failed to load services.</p>`;
