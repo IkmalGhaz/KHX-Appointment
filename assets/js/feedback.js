@@ -14,17 +14,15 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-// 2. Fetch Completed Appointments
+// 2. Fetch Completed Appointments (Forgiving Version)
 async function loadRateableAppointments(uid) {
     container.innerHTML = '';
     
     try {
-        // Query: My appointments that are 'Completed' AND NOT yet rated
-        // Note: Firestore doesn't support != queries easily, so we filter 'isRated' in JS or check status
+        // We only query by patientId to avoid needing complex Firestore indexes
         const q = query(
             collection(db, "bookings"), 
-            where("patientId", "==", uid),
-            where("status", "==", "Completed")
+            where("patientId", "==", uid)
         );
 
         const snapshot = await getDocs(q);
@@ -33,7 +31,7 @@ async function loadRateableAppointments(uid) {
             container.innerHTML = `
                 <div class="text-center py-20 opacity-50">
                     <i data-lucide="clipboard-list" class="w-16 h-16 mx-auto mb-4 text-gray-300"></i>
-                    <p class="text-gray-500 font-medium">No completed appointments to rate.</p>
+                    <p class="text-gray-500 font-medium">No appointments found.</p>
                 </div>`;
             if(window.lucide) window.lucide.createIcons();
             return;
@@ -43,31 +41,39 @@ async function loadRateableAppointments(uid) {
 
         snapshot.forEach(docSnap => {
             const data = docSnap.data();
-            // Optional: You can add a field 'isRated' to bookings to hide them after rating
-            if (data.isRated) return; 
-
-            hasItems = true;
-            const card = document.createElement('div');
-            card.className = "bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4 flex justify-between items-center";
-            card.innerHTML = `
-                <div>
-                    <p class="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-md w-fit mb-1">COMPLETED</p>
-                    <h3 class="font-bold text-gray-800">${data.serviceName}</h3>
-                    <p class="text-xs text-gray-500">${data.date} • ${data.doctorName}</p>
-                </div>
-                <button onclick="openRateModal('${docSnap.id}', '${data.serviceName}')" class="bg-[#009688] text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm active:scale-95 transition-transform">
-                    Rate
-                </button>
-            `;
-            container.appendChild(card);
+            
+            // Filter strictly for "Completed" and not yet rated in JavaScript
+            // Ensure your database status is exactly "Completed"
+            if (data.status === "Completed" && !data.isRated) {
+                hasItems = true;
+                const card = document.createElement('div');
+                card.className = "bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4 flex justify-between items-center";
+                card.innerHTML = `
+                    <div>
+                        <p class="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-md w-fit mb-1">COMPLETED</p>
+                        <h3 class="font-bold text-gray-800">${data.serviceName || 'Consultation'}</h3>
+                        <p class="text-xs text-gray-500">${data.date} • ${data.doctorName}</p>
+                    </div>
+                    <button onclick="openRateModal('${docSnap.id}', '${data.serviceName}')" class="bg-[#009688] text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm active:scale-95 transition-transform">
+                        Rate
+                    </button>
+                `;
+                container.appendChild(card);
+            }
         });
 
         if (!hasItems) {
-            container.innerHTML = `<p class="text-center text-gray-400 py-10">All appointments rated!</p>`;
+            container.innerHTML = `
+                <div class="text-center py-20 opacity-50">
+                    <i data-lucide="check-circle" class="w-16 h-16 mx-auto mb-4 text-[#009688]"></i>
+                    <p class="text-gray-500 font-medium">No completed appointments waiting for a review.</p>
+                </div>`;
         }
 
+        if(window.lucide) window.lucide.createIcons();
+
     } catch (e) {
-        console.error("Error:", e);
+        console.error("Firestore Error:", e);
         container.innerHTML = `<p class="text-red-500 text-center">Failed to load history.</p>`;
     }
 }
@@ -127,10 +133,10 @@ window.submitFeedback = async () => {
             rating: currentRating,
             comment: comment,
             createdAt: new Date(),
-            userName: user.displayName || "Patient" // Helpful for Admin display
+            userName: user.displayName || "Patient"
         });
 
-        // B. Mark Booking as Rated (so it disappears from list)
+        // B. Mark Booking as Rated so it disappears from the list
         await updateDoc(doc(db, "bookings", currentBookingId), {
             isRated: true
         });
@@ -140,7 +146,7 @@ window.submitFeedback = async () => {
         loadRateableAppointments(user.uid);
 
     } catch (e) {
-        console.error(e);
+        console.error("Submission Error:", e);
         alert("Error submitting feedback.");
     } finally {
         btn.innerText = originalText;
