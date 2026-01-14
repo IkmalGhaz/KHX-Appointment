@@ -481,8 +481,12 @@ function calculateAge(dobString) {
     return age >= 0 ? age : 0;
 }
 
+// --- ANALYTICS LOGIC ---
+// --- ANALYTICS LOGIC ---
+// --- ANALYTICS LOGIC ---
 async function loadAnalyticalReport() {
     try {
+        // 1. Fetch Users for Age Analysis (Keep existing logic)
         const usersSnap = await getDocs(collection(db, "Users"));
         let ageGroups = { '18-25': 0, '26-40': 0, '41-60': 0, '60+': 0 };
         usersSnap.forEach(doc => {
@@ -495,26 +499,83 @@ async function loadAnalyticalReport() {
                 else if (age > 60) ageGroups['60+']++;
             }
         });
-        const bookingsSnap = await getDocs(collection(db, "bookings"));
-        let weeklyVisits = 0; let monthlyVisits = 0; let doctorCounts = {};
+
+        // 2. Define Calendar Boundaries
         const now = new Date();
-        const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+
+        // --- CALENDAR WEEK (Monday to Sunday) ---
+        const currentDay = now.getDay(); // 0 (Sun) to 6 (Sat)
+        const diffToMon = now.getDate() - currentDay + (currentDay === 0 ? -6 : 1);
+        const monStart = new Date(now.setDate(diffToMon));
+        monStart.setHours(0, 0, 0, 0); // Monday 00:00:00
+
+        const sunEnd = new Date(monStart);
+        sunEnd.setDate(monStart.getDate() + 6);
+        sunEnd.setHours(23, 59, 59, 999); // Sunday 23:59:59
+
+        // --- CALENDAR MONTH (e.g., January 2026) ---
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+        // 3. Fetch Bookings
+        const bookingsSnap = await getDocs(collection(db, "bookings"));
+        let weeklyVisits = 0;
+        let monthlyVisits = 0;
+        let doctorCounts = {};
+
         bookingsSnap.forEach(doc => {
             const data = doc.data();
-            const createdDate = data.createdAt?.seconds ? new Date(data.createdAt.seconds * 1000) : new Date(data.createdAt);
-            if (data.status === "Completed" || data.status === "Upcoming") {
-                if (createdDate >= oneWeekAgo) weeklyVisits++;
-                if (createdDate >= oneMonthAgo) monthlyVisits++;
-                if (data.doctorName) doctorCounts[data.doctorName] = (doctorCounts[data.doctorName] || 0) + 1;
+            const appointmentDate = parseFriendlyDateToObj(data.date);
+
+            if (!appointmentDate) return;
+
+            // Only count confirmed/active statuses
+            if (data.status === "Completed" || data.status === "Upcoming" || data.status === "Pending Approval") {
+
+                // Catch Weekly: If date falls between this Mon and this Sun
+                if (appointmentDate >= monStart && appointmentDate <= sunEnd) {
+                    weeklyVisits++;
+                }
+
+                // Catch Monthly: If date falls within the current calendar month
+                if (appointmentDate >= monthStart && appointmentDate <= monthEnd) {
+                    monthlyVisits++;
+                }
+
+                if (data.doctorName) {
+                    doctorCounts[data.doctorName] = (doctorCounts[data.doctorName] || 0) + 1;
+                }
             }
         });
+
+        // Update UI Elements
         const weeklyCountEl = document.getElementById('weekly-count');
         const monthlyCountEl = document.getElementById('monthly-count');
         if (weeklyCountEl) weeklyCountEl.innerText = weeklyVisits;
         if (monthlyCountEl) monthlyCountEl.innerText = monthlyVisits;
+
         renderCharts(ageGroups, doctorCounts);
-    } catch (error) { console.error("Analytical Report Error:", error); }
+
+    } catch (error) {
+        console.error("Analytical Report Error:", error);
+    }
+}
+
+// Add this helper if not already in dashboard.js to parse "DD Month YYYY"
+function parseFriendlyDateToObj(dateStr) {
+    if (!dateStr) return null;
+    const parts = dateStr.split(' ');
+    if (parts.length !== 3) return null;
+
+    const day = parseInt(parts[0]);
+    const monthName = parts[1];
+    const year = parseInt(parts[2]);
+
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const monthIndex = monthNames.indexOf(monthName);
+
+    if (monthIndex === -1) return null;
+    return new Date(year, monthIndex, day);
 }
 
 function renderCharts(ageData, doctorData) {
