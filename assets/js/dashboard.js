@@ -10,15 +10,15 @@ const aptModal = document.getElementById('apt-modal');
 const viewAptBtn = document.getElementById('view-apt-btn');
 const closeAptModalBtn = document.getElementById('close-modal');
 
-// --- Profile Details IDs ---
+// --- Profile View IDs ---
 const viewFullNameHeader = document.getElementById('view-full-name-header');
 const viewFullName = document.getElementById('view-full-name');
 const viewPhone = document.getElementById('view-phone');
+const viewEmail = document.getElementById('view-email');
+const viewAddress = document.getElementById('view-address');
 const viewImg = document.getElementById('view-prof-img');
 const viewMemberSince = document.getElementById('view-member-since');
 const viewDaysCount = document.getElementById('view-days-count');
-const viewEmail = document.getElementById('view-email');
-const viewAddress = document.getElementById('view-address');
 
 // --- Profile Edit Form IDs ---
 const editForm = document.getElementById('edit-profile-form');
@@ -45,7 +45,12 @@ document.getElementById('open-edit-btn').onclick = () => {
     profileEditModal.classList.remove('hidden');
 };
 
-if (viewAptBtn) { viewAptBtn.onclick = () => { aptModal.classList.remove('hidden'); if (typeof window.switchTab === 'function') window.switchTab('Upcoming'); }; }
+if (viewAptBtn) {
+    viewAptBtn.onclick = () => {
+        aptModal.classList.remove('hidden');
+        if (typeof window.switchTab === 'function') window.switchTab('Upcoming');
+    };
+}
 if (closeAptModalBtn) { closeAptModalBtn.onclick = () => aptModal.classList.add('hidden'); }
 
 // --- PROFILE REAL-TIME SYNC ---
@@ -120,6 +125,7 @@ if (editForm) {
 
 // --- LIVE STATS SYNC ---
 function setupStatsListeners(uid) {
+    // Health Tracker & Automatic BMI Calculation
     const healthQ = query(collection(db, "HealthTracker"), where("patientId", "==", uid));
     onSnapshot(healthQ, (snapshot) => {
         if (!snapshot.empty) {
@@ -144,6 +150,7 @@ function setupStatsListeners(uid) {
         }
     });
 
+    // Mood Tracker & Ring Gradient Update
     const moodQ = query(collection(db, "MoodTracker"), where("patientId", "==", uid));
     onSnapshot(moodQ, (snapshot) => {
         if (!snapshot.empty) {
@@ -153,7 +160,7 @@ function setupStatsListeners(uid) {
 
             document.getElementById('dash-mood-val').innerText = val + "%";
             const ringContainer = document.getElementById('dash-mood-ring-container');
-            const ringColor = val <= 50 ? "#facc15" : "#22c55e";
+            const ringColor = val <= 50 ? "#facc15" : "#22c55e"; // Yellow for neutral/low, Green for happy
             ringContainer.style.background = `conic-gradient(${ringColor} ${val}%, #f3f4f6 ${val}%)`;
 
             const statusText = document.getElementById('dash-mood-status');
@@ -188,69 +195,123 @@ window.openDoctorPopup = async () => {
 
 window.closeDoctorPopup = () => document.getElementById('doctor-popup').classList.add('hidden');
 
-// --- ANALYTICS CHARTS LOGIC ---
-function initAnalyticsCharts() {
-    const chartOptions = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: { x: { grid: { display: false } }, y: { grid: { display: false }, beginAtZero: true } }
-    };
+// --- ANALYTICS LOGIC ---
 
-    const topDoctorsEl = document.getElementById('topDoctorsChart');
-    if (topDoctorsEl) {
-        new Chart(topDoctorsEl, {
-            type: 'bar',
-            data: {
-                labels: ['Dr. Sarah', 'Dr. Michael', 'Dr. Ali', 'Dr. Emma'],
-                datasets: [{
-                    data: [45, 38, 32, 25],
-                    backgroundColor: ['#009688', '#4DB6AC', '#80CBC4', '#B2DFDB'],
-                    borderRadius: 8
-                }]
-            },
-            options: { ...chartOptions, indexAxis: 'y' }
+// --- 1. HELPERS FOR ANALYTICS ---
+function calculateAge(dobString) {
+    if (!dobString) return null;
+    const [day, month, year] = dobString.split('/').map(Number);
+    const birthDate = new Date(year, month - 1, day);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) { age--; }
+    return age;
+}
+
+// --- 2. MAIN ANALYTICS FETCHING FUNCTION ---
+async function loadAnalyticalReport() {
+    try {
+        // A. Fetch Total Patients & Age Groups
+        const usersSnap = await getDocs(collection(db, "Users"));
+        let ageGroups = { '18-25': 0, '26-40': 0, '41-60': 0, '60+': 0 };
+
+        usersSnap.forEach(doc => {
+            const data = doc.data();
+            if (data.role === "Patient" && data.dateOfBirth) {
+                const age = calculateAge(data.dateOfBirth);
+                if (age >= 18 && age <= 25) ageGroups['18-25']++;
+                else if (age >= 26 && age <= 40) ageGroups['26-40']++;
+                else if (age >= 41 && age <= 60) ageGroups['41-60']++;
+                else if (age > 60) ageGroups['60+']++;
+            }
         });
-    }
 
-    const ageAnalysisEl = document.getElementById('ageAnalysisChart');
-    if (ageAnalysisEl) {
-        new Chart(ageAnalysisEl, {
+        // B. Fetch Weekly/Monthly Visits & Top Doctors
+        const bookingsSnap = await getDocs(collection(db, "bookings"));
+        let weeklyVisits = 0;
+        let monthlyVisits = 0;
+        let doctorCounts = {};
+
+        const now = new Date();
+        const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+
+        bookingsSnap.forEach(doc => {
+            const data = doc.data();
+            const createdDate = data.createdAt?.seconds ? new Date(data.createdAt.seconds * 1000) : new Date(data.createdAt);
+
+            if (data.status === "Completed" || data.status === "Upcoming") {
+                if (createdDate >= oneWeekAgo) weeklyVisits++;
+                if (createdDate >= oneMonthAgo) monthlyVisits++;
+                if (data.doctorName) {
+                    doctorCounts[data.doctorName] = (doctorCounts[data.doctorName] || 0) + 1;
+                }
+            }
+        });
+
+        // C. Update Text Elements
+        document.getElementById('weekly-count').innerText = weeklyVisits;
+        document.getElementById('monthly-count').innerText = monthlyVisits;
+
+        // D. Initialize the actual Charts with this data
+        renderCharts(ageGroups, doctorCounts);
+
+    } catch (error) {
+        console.error("Analytical Report Error:", error);
+    }
+}
+
+// --- 3. CHART RENDERING ---
+function renderCharts(ageData, doctorData) {
+    // Age Analysis Chart
+    const ageCtx = document.getElementById('ageAnalysisChart');
+    if (ageCtx) {
+        const existing = Chart.getChart(ageCtx);
+        if (existing) existing.destroy();
+        new Chart(ageCtx, {
             type: 'doughnut',
             data: {
-                labels: ['18-25', '26-40', '41-60', '60+'],
+                labels: Object.keys(ageData),
                 datasets: [{
-                    data: [30, 45, 15, 10],
+                    data: Object.values(ageData),
                     backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'],
                     borderWidth: 0
                 }]
             },
-            options: {
-                ...chartOptions,
-                cutout: '70%',
-                plugins: { legend: { display: true, position: 'right' } }
-            }
+            options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right' } } }
+        });
+    }
+
+    // Top Doctors Chart
+    const docCtx = document.getElementById('topDoctorsChart');
+    if (docCtx) {
+        const sorted = Object.entries(doctorData).sort(([, a], [, b]) => b - a).slice(0, 4);
+        const existing = Chart.getChart(docCtx);
+        if (existing) existing.destroy();
+        new Chart(docCtx, {
+            type: 'bar',
+            data: {
+                labels: sorted.map(d => d[0]),
+                datasets: [{
+                    data: sorted.map(d => d[1]),
+                    backgroundColor: '#009688',
+                    borderRadius: 8
+                }]
+            },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
         });
     }
 }
-
-// --- LOGOUT LOGIC ---
-const profileLogoutBtn = document.getElementById('profile-logout-btn');
-if (profileLogoutBtn) {
-    profileLogoutBtn.onclick = async () => {
-        if (confirm("Logout from KHS Clinic?")) {
-            await signOut(auth);
-            window.location.href = "index.html";
-        }
-    };
-}
-
 // --- AUTH OBSERVER ---
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         setupProfileListener(user.uid);
         setupStatsListeners(user.uid);
-        initAnalyticsCharts();
+
+        // IMPORTANT: Call the new analytics function
+        await loadAnalyticalReport();
+
         if (typeof window.loadAppointments === 'function') window.loadAppointments(user.uid);
         lucide.createIcons();
     } else {
