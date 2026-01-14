@@ -615,8 +615,7 @@ function calculateAge(dobString) {
     return age >= 0 ? age : 0;
 }
 
-// --- ANALYTICS LOGIC ---
-// --- ANALYTICS LOGIC ---
+
 // --- ANALYTICS LOGIC ---
 async function loadAnalyticalReport() {
     try {
@@ -826,5 +825,16 @@ onAuthStateChanged(auth, async (user) => {
         if (window.lucide) window.lucide.createIcons();
     } else {
         window.location.href = "index.html";
+    }
+});
+
+// --- WhatsApp Button Logic ---
+document.addEventListener("DOMContentLoaded", () => {
+    const phoneNumber = "60164081283"; 
+    const waMsg = "Hi Staff, I have an inquiry regarding my appointment.";
+    
+    const waBtn = document.getElementById('wa-float-btn');
+    if (waBtn) {
+        waBtn.href = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(waMsg)}`;
     }
 });
