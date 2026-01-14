@@ -33,6 +33,18 @@ const imgUploadInput = document.getElementById('img-upload');
 let currentUserDocId = null;
 
 // --- MODAL HANDLERS ---
+if (imgUploadInput) {
+    imgUploadInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                if (editImgPreview) editImgPreview.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+}
 if (profileIconBtn) profileIconBtn.onclick = () => profileViewModal.classList.remove('hidden');
 window.closeViewProfile = () => profileViewModal.classList.add('hidden');
 window.closeEditProfile = () => {
@@ -268,24 +280,50 @@ function setupEditDependentsListener(uid) {
     });
 }
 
-// --- SUBMIT PROFILE UPDATES ---
+// --- SUBMIT PROFILE UPDATES (WITH IMAGE UPLOAD) ---
 if (editForm) {
     editForm.onsubmit = async (e) => {
         e.preventDefault();
         if (!currentUserDocId) return alert("User data not loaded yet.");
+
         const saveBtn = document.getElementById('save-edit-btn');
         const originalText = saveBtn.innerText;
         saveBtn.innerText = "Updating...";
         saveBtn.disabled = true;
+
         try {
             const userRef = doc(db, "Users", currentUserDocId);
-            await updateDoc(userRef, {
+            let updateData = {
                 fullName: editNameInput.value.trim(),
                 phone: editPhoneInput.value.trim(),
                 mailingAddress: editAddressInput.value.trim()
-            });
+            };
+
+            // --- IMAGE UPLOAD LOGIC ---
+            const file = imgUploadInput.files[0];
+            if (file) {
+                // Create a reference to 'profile_pictures/uid_filename'
+                const storageRef = ref(storage, `profile_pictures/${auth.currentUser.uid}_${file.name}`);
+
+                // Upload file
+                const snapshot = await uploadBytes(storageRef, file);
+
+                // Get Download URL
+                const downloadURL = await getDownloadURL(snapshot.ref);
+
+                // Add the URL to our Firestore update payload
+                updateData.profilePictureUrl = downloadURL;
+            }
+
+            // Update Firestore
+            await updateDoc(userRef, updateData);
+
             alert("Profile updated successfully!");
             closeEditProfile();
+
+            // Optional: Reset file input so it doesn't try to upload the same file twice
+            imgUploadInput.value = "";
+
         } catch (error) {
             console.error("Update Error:", error);
             alert("Failed to update profile: " + error.message);
@@ -295,7 +333,6 @@ if (editForm) {
         }
     };
 }
-
 // --- LIVE STATS SYNC ---
 function setupStatsListeners(uid) {
     // 1. Health Sync
