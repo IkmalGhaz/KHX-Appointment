@@ -10,6 +10,17 @@ const reasonInput = document.getElementById('cancel-reason-input');
 const confirmBtn = document.getElementById('confirm-cancel-btn');
 const finalConfirmBtn = document.getElementById('final-confirm-btn');
 
+// --- HELPER: CHECK IF TIME HAS PASSED ---
+function isTimePassed(dateStr, timeStr) {
+    if (!dateStr || !timeStr) return false;
+    // Combine date and time string to compare with "Now"
+    // Assumes dateStr is YYYY-MM-DD and timeStr is HH:MM AM/PM or HH:MM
+    const combinedString = `${dateStr} ${timeStr}`;
+    const aptDate = new Date(combinedString);
+    const now = new Date();
+    return aptDate < now;
+}
+
 // 1. Auth Observer
 onAuthStateChanged(auth, (user) => {
     if (user) {
@@ -125,9 +136,26 @@ function applyFiltersAndRender() {
     allUserAppointments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     const filtered = allUserAppointments.filter(apt => {
-        if (currentTab === 'Upcoming') return apt.status === 'Upcoming' || apt.status === 'Pending Approval';
-        if (currentTab === 'Cancelled') return apt.status === 'Cancelled';
-        if (currentTab === 'Past') return apt.status === 'Completed';
+        // Calculate if the time has physically passed
+        const hasPassed = isTimePassed(apt.date, apt.time);
+
+        // TAB: UPCOMING
+        // Must be Active status AND NOT passed yet
+        if (currentTab === 'Upcoming') {
+            return (apt.status === 'Upcoming' || apt.status === 'Pending Approval') && !hasPassed;
+        }
+
+        // TAB: CANCELLED
+        if (currentTab === 'Cancelled') {
+            return apt.status === 'Cancelled';
+        }
+
+        // TAB: PAST
+        // Must be Completed OR (Active status BUT passed time)
+        if (currentTab === 'Past') {
+            return apt.status === 'Completed' || ((apt.status === 'Upcoming' || apt.status === 'Pending Approval') && hasPassed);
+        }
+
         return false;
     });
 
@@ -141,11 +169,20 @@ function renderList(list) {
         return;
     }
 
-    aptList.innerHTML = list.map(apt => `
+    aptList.innerHTML = list.map(apt => {
+        const hasPassed = isTimePassed(apt.date, apt.time);
+        
+        // If it's in the Past tab but status wasn't officially changed to Completed/Cancelled, show "Expired" or similar
+        let displayStatus = apt.status;
+        if (hasPassed && apt.status !== 'Completed' && apt.status !== 'Cancelled') {
+            displayStatus = 'Expired'; 
+        }
+
+        return `
         <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm mb-4 transition-all hover:shadow-md">
             <div class="flex justify-between items-start mb-3">
-                <span class="text-[10px] font-black px-3 py-1 rounded-full ${getStatusStyle(apt.status)} uppercase tracking-wider">
-                    ${apt.status}
+                <span class="text-[10px] font-black px-3 py-1 rounded-full ${getStatusStyle(apt.status, hasPassed)} uppercase tracking-wider">
+                    ${displayStatus}
                 </span>
                 <div class="text-right">
                     <p class="text-xs font-bold text-gray-900">${apt.date}</p>
@@ -166,24 +203,30 @@ function renderList(list) {
             <div class="flex justify-between items-center pt-4 border-t border-gray-50">
                 <span class="text-base font-black text-[#009688]">RM ${apt.price || '--'}</span>
                 
-                ${(apt.status === 'Upcoming' || apt.status === 'Pending Approval') ?
+                ${(!hasPassed && (apt.status === 'Upcoming' || apt.status === 'Pending Approval')) ?
                 `<button onclick="cancelBooking('${apt.id}')" class="flex items-center gap-1 text-xs font-bold text-red-500 bg-red-50 px-4 py-2 rounded-xl hover:bg-red-100 transition-colors">
                     <i data-lucide="x" class="w-3 h-3"></i> Cancel
                 </button>` : ''}
 
-                ${(apt.status === 'Cancelled') ?
+                ${(apt.status === 'Cancelled' || hasPassed || apt.status === 'Completed') ?
                 `<button onclick="rebookAppointment('${apt.serviceName}', '${apt.price}', '${apt.doctorId}', '${apt.doctorName}')" class="flex items-center gap-1 text-xs font-bold text-white bg-[#009688] px-4 py-2 rounded-xl hover:bg-[#00796b] transition-colors shadow-sm">
                     <i data-lucide="refresh-cw" class="w-3 h-3"></i> Rebook
                 </button>` : ''}
             </div>
         </div>
-    `).join('');
+    `}).join('');
     
     if (window.lucide) window.lucide.createIcons();
 }
 
-function getStatusStyle(status) {
+function getStatusStyle(status, hasPassed) {
     const s = status.toLowerCase();
+    
+    // If it has physically passed but is not cancelled/completed, give it a gray "Expired" look
+    if (hasPassed && s !== 'completed' && s !== 'cancelled') {
+        return 'bg-gray-100 text-gray-500 border border-gray-200';
+    }
+
     if (s === 'upcoming' || s === 'pending approval' || s === 'pending') return 'bg-green-100 text-green-700 border border-green-200';
     if (s === 'cancelled') return 'bg-red-100 text-red-700 border border-red-200';
     return 'bg-slate-800 text-white border border-slate-900';
