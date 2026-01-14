@@ -82,15 +82,18 @@
         <div class="bg-white rounded-t-[2.5rem] h-[90%] flex flex-col overflow-hidden animate-slide-up">
             <div class="px-6 pt-8 pb-4 flex justify-between items-center border-b border-gray-50">
                 <h2 class="text-xl font-bold text-gray-900">Personal Information</h2>
-                <button onclick="closeViewProfile()" class="p-2 bg-gray-100 rounded-full"><i data-lucide="x"
-                        class="w-5 h-5 text-gray-600"></i></button>
+                <button onclick="closeViewProfile()" class="p-2 bg-gray-100 rounded-full">
+                    <i data-lucide="x" class="w-5 h-5 text-gray-600"></i>
+                </button>
             </div>
+
 
             <div class="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6">
                 <div class="bg-teal-50 border border-teal-100 rounded-3xl p-5 flex items-center gap-4">
                     <div
                         class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-[#009688] shadow-sm">
-                        <i data-lucide="clock" class="w-6 h-6"></i></div>
+                        <i data-lucide="clock" class="w-6 h-6"></i>
+                    </div>
                     <div>
                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Member since</p>
                         <h4 id="view-member-since" class="text-base font-bold text-gray-800 leading-tight">Loading...
@@ -104,17 +107,20 @@
                         class="w-24 h-24 rounded-full object-cover border-4 border-teal-50 shadow-md">
                     <h3 id="view-full-name-header" class="text-lg font-bold text-gray-800">User Name</h3>
                 </div>
+
                 <div class="space-y-4">
-                    <div class="space-y-1"><label class="text-xs font-bold text-gray-400 uppercase ml-1">Full
-                            Name</label>
-                        <div class="flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl p-3.5"><span
-                                id="view-full-name">--</span></div>
+                    <div class="space-y-1">
+                        <label class="text-xs font-bold text-gray-400 uppercase ml-1">Full Name</label>
+                        <div class="flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl p-3.5">
+                            <span id="view-full-name">--</span>
+                        </div>
                     </div>
-                    
-                    <div class="space-y-1"><label class="text-xs font-bold text-gray-400 uppercase ml-1">Phone
-                            Number</label>
-                        <div class="flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl p-3.5"><span
-                                id="view-phone">--</span></div>
+
+                    <div class="space-y-1">
+                        <label class="text-xs font-bold text-gray-400 uppercase ml-1">Phone Number</label>
+                        <div class="flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl p-3.5">
+                            <span id="view-phone">--</span>
+                        </div>
                     </div>
                 </div>
 
@@ -125,14 +131,7 @@
                         <span id="view-email" class="text-gray-600">--</span>
                     </div>
                 </div>
-                <div class="space-y-1">
-                    <label class="text-sm font-semibold text-gray-700 ml-1">Date of Birth</label>
-                    <div class="flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl p-3.5">
-                        <i data-lucide="calendar" class="w-5 h-5 text-gray-400"></i>
-                        <span id="view-dob" class="text-gray-600">--</span>
-                    </div>
-                </div>
-                
+
                 <div class="space-y-1">
                     <label class="text-sm font-semibold text-gray-700 ml-1">Address</label>
                     <div class="flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl p-3.5">
@@ -140,7 +139,7 @@
                         <span id="view-address" class="text-gray-600">--</span>
                     </div>
                 </div>
-                
+
                 <div class="pt-4 space-y-3">
                     <button id="open-edit-btn"
                         class="w-full bg-[#009688] text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all">Edit
@@ -152,15 +151,17 @@
             </div>
         </div>
     </div>
-
+    
     <div id="profile-edit-modal"
         class="absolute inset-0 bg-black/50 backdrop-blur-sm z-[60] hidden flex flex-col justify-end">
         <div class="bg-white rounded-t-[2.5rem] h-[90%] flex flex-col overflow-hidden animate-slide-up">
             <div class="px-6 pt-8 pb-4 flex justify-between items-center border-b border-gray-50">
                 <h2 class="text-xl font-bold text-gray-900">Edit Profile</h2>
-                <button onclick="closeEditProfile()" class="p-2 bg-gray-100 rounded-full"><i data-lucide="x"
-                        class="w-5 h-5 text-gray-600"></i></button>
+                <button onclick="closeEditProfile()" class="p-2 bg-gray-100 rounded-full">
+                    <i data-lucide="x" class="w-5 h-6 text-gray-600"></i>
+                </button>
             </div>
+    
             <div class="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6">
                 <form id="edit-profile-form" class="space-y-4">
                     <div class="flex flex-col items-center gap-3">
@@ -168,40 +169,37 @@
                             <img id="edit-prof-img-preview" src="assets/js/images/default-user.png"
                                 class="w-full h-full rounded-full object-cover border-4 border-teal-50">
                             <label for="img-upload"
-                                class="absolute bottom-0 right-0 bg-[#009688] p-2 rounded-full text-white cursor-pointer shadow-lg"><i
-                                    data-lucide="camera" class="w-4 h-4"></i></label>
+                                class="absolute bottom-0 right-0 bg-[#009688] p-2 rounded-full text-white cursor-pointer shadow-lg">
+                                <i data-lucide="camera" class="w-4 h-4"></i>
+                            </label>
                             <input type="file" id="img-upload" class="hidden" accept="image/*">
                         </div>
                     </div>
-                    <div class="space-y-1"><label class="text-xs font-bold text-gray-400 uppercase ml-1">Full
-                            Name</label><input type="text" id="edit-prof-name"
+    
+                    <div class="space-y-1">
+                        <label class="text-xs font-bold text-gray-400 uppercase ml-1">Full Name</label>
+                        <input type="text" id="edit-prof-name"
                             class="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm font-semibold outline-none focus:ring-2 focus:ring-[#009688]">
                     </div>
-                    <div class="space-y-1"><label class="text-xs font-bold text-gray-400 uppercase ml-1">Phone
-                            Number</label><input type="tel" id="edit-prof-phone"
+    
+                    <div class="space-y-1">
+                        <label class="text-xs font-bold text-gray-400 uppercase ml-1">Phone Number</label>
+                        <input type="tel" id="edit-prof-phone"
                             class="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm font-semibold outline-none focus:ring-2 focus:ring-[#009688]">
                     </div>
-                    <div class="space-y-1"><label class="text-xs font-bold text-gray-400 uppercase ml-1">Mailing
-                            Address</label><textarea id="edit-prof-address" rows="3"
+    
+                    <div class="space-y-1">
+                        <label class="text-xs font-bold text-gray-400 uppercase ml-1">Mailing Address</label>
+                        <textarea id="edit-prof-address" rows="3"
                             class="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm font-semibold outline-none focus:ring-2 focus:ring-[#009688] resize-none"></textarea>
                     </div>
+    
                     <button type="submit" id="save-edit-btn"
-                        class="w-full bg-[#009688] text-white font-bold py-4 rounded-2xl shadow-lg mt-4">Save
-                        Changes</button>
+                        class="w-full bg-[#009688] text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all mt-4">
+                        Save Changes
+                    </button>
                 </form>
             </div>
-        </div>
-    </div>
-
-    <div id="doctor-popup"
-        class="absolute inset-0 bg-black/50 backdrop-blur-sm z-[70] hidden flex flex-col justify-end">
-        <div class="bg-white rounded-t-[2.5rem] h-[80%] flex flex-col overflow-hidden animate-slide-up">
-            <div class="px-6 pt-8 pb-4 flex justify-between items-center border-b border-gray-50">
-                <h2 class="text-xl font-bold text-gray-900">Our Specialists</h2>
-                <button onclick="closeDoctorPopup()" class="p-2 bg-gray-100 rounded-full"><i data-lucide="x"
-                        class="w-5 h-5 text-gray-600"></i></button>
-            </div>
-            <div id="doctor-popup-list" class="flex-1 overflow-y-auto p-6 space-y-4"></div>
         </div>
     </div>
 
@@ -213,7 +211,9 @@
                     <h1 class="text-2xl font-bold text-white tracking-tight">Welcome</h1>
                 </div>
                 <div class="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm border-2 border-white/30 flex items-center justify-center text-white cursor-pointer"
-                    id="logout-btn"><i data-lucide="user" class="w-5 h-5"></i></div>
+                    id="logout-btn">
+                    <i data-lucide="user" class="w-5 h-5"></i>
+                </div>
             </div>
             <div class="text-center">
                 <h2 class="text-xl font-bold text-white tracking-tight uppercase">KHS Clinic</h2>
@@ -224,6 +224,7 @@
         <div class="flex-1 overflow-y-auto no-scrollbar px-6 -mt-10 pb-6 relative z-20 space-y-5">
             <div class="pt-4 px-1">
                 <div class="scroll-container no-scrollbar gap-4 pb-4">
+
                     <div class="scroll-item bg-white p-5 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col items-center justify-center cursor-pointer active:scale-95 transition-all"
                         onclick="window.location.href='health.html'">
                         <i data-lucide="activity" class="w-12 h-12 bg-blue-50 text-blue-500 p-3 rounded-full mb-3"></i>
@@ -231,24 +232,31 @@
                         <div class="text-center mt-1">
                             <p id="dash-height" class="text-xs font-bold text-gray-700">-- cm</p>
                             <p id="dash-weight" class="text-xs font-bold text-gray-700">-- kg</p>
+                            <p id="dash-bmi-val" class="text-[10px] font-black text-[#009688] mt-1">BMI: --</p>
+                            <p id="dash-bmi-status" class="text-[8px] font-bold text-gray-400 uppercase">--</p>
                         </div>
                     </div>
-                    <div class="scroll-item bg-white p-5 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col items-center justify-center cursor-pointer active:scale-95 transition-all" onclick="window.location.href='mood.html'">
-    <div id="dash-mood-ring-container" class="w-16 h-16 rounded-full flex items-center justify-center mb-2 relative" 
-         style="background: conic-gradient(#22c55e 0%, #f3f4f6 0%);">
-        <div class="absolute inset-0 m-1.5 bg-white rounded-full flex flex-col items-center justify-center">
-            <span id="dash-mood-val" class="text-lg font-black text-gray-800 leading-none">--</span>
-            <span class="text-[8px] text-gray-400 font-bold uppercase">mood</span>
-        </div>
-    </div>
-    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">My Mood</p>
-    <p id="dash-mood-status" class="text-xs font-bold text-gray-700">Today</p>
-</div>
+
+                    <div class="scroll-item bg-white p-5 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col items-center justify-center cursor-pointer active:scale-95 transition-all"
+                        onclick="window.location.href='mood.html'">
+                        <div id="dash-mood-ring-container"
+                            class="w-16 h-16 rounded-full flex items-center justify-center mb-2 relative"
+                            style="background: conic-gradient(#f3f4f6 0%, #f3f4f6 0%);">
+                            <div
+                                class="absolute inset-0 m-1.5 bg-white rounded-full flex flex-col items-center justify-center">
+                                <span id="dash-mood-val" class="text-lg font-black text-gray-800 leading-none">--</span>
+                                <span class="text-[8px] text-gray-400 font-bold uppercase">mood</span>
+                            </div>
+                        </div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">My Mood</p>
+                        <p id="dash-mood-status" class="text-xs font-bold text-gray-700">Today</p>
+                    </div>
+
                     <div class="scroll-item bg-white p-5 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col items-center justify-center cursor-pointer active:scale-95 transition-all"
                         onclick="openDoctorPopup()">
                         <i data-lucide="stethoscope"
                             class="w-12 h-12 bg-teal-50 text-[#009688] p-3 rounded-full mb-3"></i>
-                        <p class="text-[10px] font-bold text-gray-400 uppercase">Expert Doctors</p>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase">Specialists</p>
                     </div>
                 </div>
             </div>
@@ -256,7 +264,8 @@
             <div class="space-y-3">
                 <button onclick="window.location.href='booking.html'"
                     class="w-full bg-[#009688] text-white p-4 rounded-2xl flex items-center justify-between shadow-lg">
-                    <div class="flex items-center gap-4"><i data-lucide="calendar-plus" class="w-6 h-6"></i>
+                    <div class="flex items-center gap-4">
+                        <i data-lucide="calendar-plus" class="w-6 h-6"></i>
                         <div class="text-left">
                             <p class="font-bold">Book</p>
                             <p class="text-teal-50 text-xs">New Appointment</p>
@@ -266,17 +275,19 @@
                 </button>
                 <button id="view-apt-btn"
                     class="w-full bg-white text-gray-800 p-4 rounded-2xl border border-gray-100 flex items-center justify-between">
-                    <div class="flex items-center gap-4"><i data-lucide="calendar-check"
-                            class="w-6 h-6 text-gray-600"></i>
+                    <div class="flex items-center gap-4">
+                        <i data-lucide="calendar-check" class="w-6 h-6 text-gray-600"></i>
                         <div class="text-left">
                             <p class="font-bold">View</p>
                             <p class="text-gray-400 text-xs">My History</p>
                         </div>
                     </div>
+                    <i data-lucide="chevron-right" class="w-5 h-5 text-gray-300"></i>
                 </button>
                 <button onclick="window.location.href='feedback.html'"
                     class="w-full bg-white text-gray-800 p-4 rounded-2xl border border-gray-100 flex items-center justify-between">
-                    <div class="flex items-center gap-4"><i data-lucide="star" class="w-6 h-6 text-gray-600"></i>
+                    <div class="flex items-center gap-4">
+                        <i data-lucide="star" class="w-6 h-6 text-gray-600"></i>
                         <div class="text-left">
                             <p class="font-bold">Feedback</p>
                             <p class="text-gray-400 text-xs">& Rating</p>
@@ -298,8 +309,9 @@
                     </div>
                 </div>
                 <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
-                    <h4 class="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2"><i data-lucide="users"
-                            class="w-4 h-4 text-blue-500"></i> Patient Age Analysis</h4>
+                    <h4 class="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <i data-lucide="users" class="w-4 h-4 text-blue-500"></i> Patient Age Analysis
+                    </h4>
                     <div class="h-[200px] w-full"><canvas id="ageAnalysisChart"></canvas></div>
                 </div>
             </div>
@@ -309,8 +321,9 @@
             <div class="bg-white rounded-t-[2.5rem] h-[85%] flex flex-col overflow-hidden animate-slide-up">
                 <div class="px-6 pt-8 pb-4 flex justify-between items-center">
                     <h2 class="text-xl font-bold text-gray-900">My Appointments</h2>
-                    <button id="close-modal" class="p-2 bg-gray-100 rounded-full"><i data-lucide="x"
-                            class="w-5 h-5 text-gray-600"></i></button>
+                    <button id="close-modal" class="p-2 bg-gray-100 rounded-full">
+                        <i data-lucide="x" class="w-5 h-5 text-gray-600"></i>
+                    </button>
                 </div>
                 <div class="flex px-6 border-b border-gray-50">
                     <button onclick="switchTab('Upcoming')"
@@ -324,6 +337,7 @@
             </div>
         </div>
     </div>
+
     <script type="module" src="assets/js/dashboard.js"></script>
     <script type="module" src="assets/js/view-appointments.js"></script>
 </body>
