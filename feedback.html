@@ -38,27 +38,29 @@
 
     </div>
 
-    <div id="rating-modal" class="absolute inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-end sm:items-center justify-center transition-opacity">
-        <div class="bg-white w-full sm:w-[90%] rounded-t-3xl sm:rounded-3xl p-6 animate-[slideUp_0.3s_ease-out]">
-            <div class="flex justify-between items-center mb-6">
-                <div>
-                    <h3 class="font-bold text-lg text-gray-900">Write a Review</h3>
-                    <p class="text-xs text-gray-400" id="modal-service-name">Service Name</p>
-                </div>
-                <button onclick="closeModal()" class="bg-gray-100 p-2 rounded-full text-gray-500"><i data-lucide="x" class="w-5 h-5"></i></button>
+    <div id="rating-modal"
+        class="absolute inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center p-6 transition-all">
+        <div class="bg-white w-full max-w-[320px] rounded-3xl p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div class="text-center mb-6">
+                <h3 class="font-bold text-lg text-gray-900">Rate Your Visit</h3>
+                <p class="text-xs text-gray-400 mt-1" id="modal-service-name">Service Name</p>
             </div>
-
+    
             <div class="flex justify-center gap-2 mb-6" id="star-container">
-                </div>
-
-            <textarea id="feedback-comment" rows="4" placeholder="How was your experience with Dr. Ali?" 
-                class="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm outline-none focus:ring-2 focus:ring-[#009688] resize-none mb-6"></textarea>
-
-            <button onclick="submitFeedback()" id="submit-btn" class="w-full bg-[#009688] text-white font-bold py-4 rounded-xl shadow-lg shadow-teal-200 active:scale-95 transition-all">
-                Submit Review
-            </button>
+            </div>
+    
+            <textarea id="feedback-comment" rows="3" placeholder="Share your experience..."
+                class="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 text-sm outline-none focus:ring-2 focus:ring-[#009688] resize-none mb-6"></textarea>
+    
+            <div class="flex gap-3">
+                <button onclick="closeModal()"
+                    class="flex-1 py-3 text-sm font-bold text-gray-400 hover:bg-gray-50 rounded-xl transition-colors">Cancel</button>
+                <button onclick="submitFeedback()" id="submit-btn"
+                    class="flex-1 bg-[#009688] text-white text-sm font-bold py-3 rounded-xl shadow-lg shadow-teal-100 active:scale-95 transition-all">
+                    Confirm
+                </button>
+            </div>
         </div>
-    </div>
 
     <script>lucide.createIcons();</script>
     <script type="module" src="assets/js/feedback.js"></script>

@@ -5,7 +5,7 @@ const modal = document.getElementById('rating-modal');
 let currentBookingId = null;
 let currentRating = 0;
 
-// 1. Auth Guard & Load
+// 1. Auth Observer
 onAuthStateChanged(auth, (user) => {
     if (user) {
         loadRateableAppointments(user.uid);
@@ -14,48 +14,38 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-// 2. Fetch Completed Appointments (Forgiving Version)
+// 2. Fetch Logic (Modified to handle past dates automatically)
 async function loadRateableAppointments(uid) {
-    container.innerHTML = '';
-    
+    container.innerHTML = '<div class="text-center py-10"><div class="animate-spin inline-block w-6 h-6 border-2 border-[#009688] border-t-transparent rounded-full"></div></div>';
+
     try {
-        // We only query by patientId to avoid needing complex Firestore indexes
-        const q = query(
-            collection(db, "bookings"), 
-            where("patientId", "==", uid)
-        );
-
+        const q = query(collection(db, "bookings"), where("patientId", "==", uid));
         const snapshot = await getDocs(q);
+        container.innerHTML = '';
 
-        if (snapshot.empty) {
-            container.innerHTML = `
-                <div class="text-center py-20 opacity-50">
-                    <i data-lucide="clipboard-list" class="w-16 h-16 mx-auto mb-4 text-gray-300"></i>
-                    <p class="text-gray-500 font-medium">No appointments found.</p>
-                </div>`;
-            if(window.lucide) window.lucide.createIcons();
-            return;
-        }
-
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         let hasItems = false;
 
         snapshot.forEach(docSnap => {
             const data = docSnap.data();
-            
-            // Filter strictly for "Completed" and not yet rated in JavaScript
-            // Ensure your database status is exactly "Completed"
-            if (data.status === "Completed" && !data.isRated) {
+            const aptDate = parseFriendlyDateToObj(data.date);
+            const isPastDate = aptDate && aptDate < todayStart;
+            const isCompleted = data.status === "Completed";
+
+            // Only show if not rated yet and is either manually completed or date has passed
+            if (!data.isRated && (isCompleted || isPastDate) && data.status !== "Cancelled") {
                 hasItems = true;
                 const card = document.createElement('div');
                 card.className = "bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4 flex justify-between items-center";
                 card.innerHTML = `
                     <div>
-                        <p class="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-md w-fit mb-1">COMPLETED</p>
+                        <p class="text-[10px] font-bold text-[#009688] bg-teal-50 px-2 py-0.5 rounded-md w-fit mb-1 uppercase">Past Visit</p>
                         <h3 class="font-bold text-gray-800">${data.serviceName || 'Consultation'}</h3>
                         <p class="text-xs text-gray-500">${data.date} • ${data.doctorName}</p>
                     </div>
-                    <button onclick="openRateModal('${docSnap.id}', '${data.serviceName}')" class="bg-[#009688] text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm active:scale-95 transition-transform">
-                        Rate
+                    <button onclick="openRateModal('${docSnap.id}', '${data.serviceName}')" class="bg-[#009688] text-white px-5 py-2 rounded-xl text-xs font-bold shadow-sm active:scale-95 transition-all">
+                        Rate Now
                     </button>
                 `;
                 container.appendChild(card);
@@ -63,80 +53,68 @@ async function loadRateableAppointments(uid) {
         });
 
         if (!hasItems) {
-            container.innerHTML = `
-                <div class="text-center py-20 opacity-50">
-                    <i data-lucide="check-circle" class="w-16 h-16 mx-auto mb-4 text-[#009688]"></i>
-                    <p class="text-gray-500 font-medium">No completed appointments waiting for a review.</p>
-                </div>`;
+            container.innerHTML = `<div class="text-center py-20 opacity-50"><p class="text-gray-500 font-medium">All past visits have been rated!</p></div>`;
         }
-
-        if(window.lucide) window.lucide.createIcons();
-
+        if (window.lucide) window.lucide.createIcons();
     } catch (e) {
-        console.error("Firestore Error:", e);
-        container.innerHTML = `<p class="text-red-500 text-center">Failed to load history.</p>`;
+        console.error(e);
+        container.innerHTML = `<p class="text-red-500 text-center py-10">Failed to load history.</p>`;
     }
 }
 
-// 3. Modal Functions
+// 3. Modal & Star Logic
 window.openRateModal = (id, serviceName) => {
     currentBookingId = id;
     document.getElementById('modal-service-name').innerText = serviceName;
+    currentRating = 0;
     renderStars(0);
     modal.classList.remove('hidden');
 };
 
 window.closeModal = () => {
     modal.classList.add('hidden');
-    currentBookingId = null;
-    currentRating = 0;
     document.getElementById('feedback-comment').value = "";
 };
 
-// 4. Star Logic
 function renderStars(rating) {
     currentRating = rating;
     const starContainer = document.getElementById('star-container');
     starContainer.innerHTML = '';
-    
+
     for (let i = 1; i <= 5; i++) {
         const isFill = i <= rating;
         const star = document.createElement('div');
-        star.innerHTML = `<i data-lucide="star" class="w-8 h-8 cursor-pointer transition-colors ${isFill ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}"></i>`;
+        // Custom interactive stars
+        star.innerHTML = `<i data-lucide="star" class="w-8 h-8 cursor-pointer transition-all ${isFill ? 'fill-amber-400 text-amber-400 scale-110' : 'text-gray-200'}"></i>`;
         star.onclick = () => renderStars(i);
         starContainer.appendChild(star);
     }
-    if(window.lucide) window.lucide.createIcons();
+    if (window.lucide) window.lucide.createIcons();
 }
 
-// 5. Submit Logic
+// 4. Submit to Firestore
 window.submitFeedback = async () => {
-    if (currentRating === 0) {
-        alert("Please select a star rating.");
-        return;
-    }
+    if (currentRating === 0) return alert("Please select a star rating.");
 
     const btn = document.getElementById('submit-btn');
-    const comment = document.getElementById('feedback-comment').value;
-    const originalText = btn.innerText;
-    
-    btn.innerText = "Submitting...";
+    const comment = document.getElementById('feedback-comment').value.trim();
+
+    btn.innerText = "Saving...";
     btn.disabled = true;
 
     try {
         const user = auth.currentUser;
-        
-        // A. Add to Feedback Collection
+
+        // Push to feedback collection
         await addDoc(collection(db, "feedback"), {
             bookingId: currentBookingId,
-            userId: user.uid,
+            patientId: user.uid,
             rating: currentRating,
-            comment: comment,
-            createdAt: new Date(),
-            userName: user.displayName || "Patient"
+            comment: comment || "No comment provided",
+            createdAt: new Date()
         });
 
-        // B. Mark Booking as Rated so it disappears from the list
+        // Update booking status
         await updateDoc(doc(db, "bookings", currentBookingId), {
             isRated: true
         });
@@ -144,12 +122,21 @@ window.submitFeedback = async () => {
         alert("Thank you for your feedback!");
         closeModal();
         loadRateableAppointments(user.uid);
-
     } catch (e) {
-        console.error("Submission Error:", e);
+        console.error(e);
         alert("Error submitting feedback.");
     } finally {
-        btn.innerText = originalText;
+        btn.innerText = "Confirm";
         btn.disabled = false;
     }
 };
+
+// Date Parser Helper
+function parseFriendlyDateToObj(dateStr) {
+    if (!dateStr) return null;
+    const parts = dateStr.split(' ');
+    const day = parseInt(parts[0]);
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const monthIndex = monthNames.indexOf(parts[1]);
+    return new Date(parseInt(parts[2]), monthIndex, day);
+}
