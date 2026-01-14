@@ -156,8 +156,9 @@
                         class="w-full bg-[#009688] text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all">Edit
                         Profile</button>
                     <button id="profile-logout-btn"
-                        class="w-full py-4 bg-red-50 text-red-600 font-bold rounded-2xl active:scale-95 transition-all">Logout
-                        Account</button>
+                        class="w-full py-4 bg-red-50 text-red-600 font-bold rounded-2xl active:scale-95 transition-all">
+                        Logout Account
+                    </button>
                 </div>
             </div>
         </div>
@@ -328,25 +329,66 @@
             </div>
         </div>
 
-        <div id="apt-modal" class="absolute inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex flex-col justify-end">
-            <div class="bg-white rounded-t-[2.5rem] h-[85%] flex flex-col overflow-hidden animate-slide-up">
-                <div class="px-6 pt-8 pb-4 flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-gray-900">My Appointments</h2>
-                    <button id="close-modal" class="p-2 bg-gray-100 rounded-full">
-                        <i data-lucide="x" class="w-5 h-5 text-gray-600"></i>
-                    </button>
-                </div>
-                <div class="flex px-6 border-b border-gray-50">
-                    <button onclick="switchTab('Upcoming')"
-                        class="tab-btn flex-1 py-3 text-sm font-bold border-b-2 border-[#009688] text-[#009688]">Upcoming</button>
-                    <button onclick="switchTab('Past')"
-                        class="tab-btn flex-1 py-3 text-sm font-bold border-b-2 border-transparent text-gray-400">Past</button>
-                    <button onclick="switchTab('Cancelled')"
-                        class="tab-btn flex-1 py-3 text-sm font-bold border-b-2 border-transparent text-gray-400">Cancelled</button>
-                </div>
-                <div id="appointments-list" class="flex-1 overflow-y-auto no-scrollbar p-6 bg-gray-50/50"></div>
+    <div id="apt-modal" class="absolute inset-0 bg-white z-50 hidden flex flex-col animate-full-modal">
+        <div class="px-6 pt-12 pb-4 flex justify-between items-center border-b border-gray-50">
+            <h2 class="text-xl font-bold text-gray-900">My Appointments</h2>
+            <button id="close-modal" class="p-2 bg-gray-100 rounded-full"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+    
+        <div class="flex px-6 border-b border-gray-50 bg-gray-50/50">
+            <button onclick="switchTab('Upcoming')" id="tab-upcoming"
+                class="tab-btn flex-1 py-4 text-xs font-black uppercase tracking-widest border-b-4 border-[#009688] text-[#009688]">Upcoming</button>
+            <button onclick="switchTab('Past')" id="tab-past"
+                class="tab-btn flex-1 py-4 text-xs font-black uppercase tracking-widest border-b-4 border-transparent text-gray-400">Past</button>
+            <button onclick="switchTab('Cancelled')" id="tab-cancelled"
+                class="tab-btn flex-1 py-4 text-xs font-black uppercase tracking-widest border-b-4 border-transparent text-gray-400">Cancelled</button>
+        </div>
+    
+        <div id="appointments-list" class="flex-1 overflow-y-auto no-scrollbar p-6 bg-gray-50/30"></div>
+    </div>
+    
+    <div id="cancel-confirm-modal"
+        class="absolute inset-0 z-[120] bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-6">
+        <div class="bg-white w-full rounded-3xl p-6 shadow-2xl">
+            <h3 class="text-lg font-bold text-gray-900 mb-2">Cancel Appointment?</h3>
+            <p class="text-sm text-gray-500 mb-4">Please let us know why you are cancelling.</p>
+            <textarea id="cancel-reason-input"
+                class="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 text-sm outline-none focus:ring-2 focus:ring-red-500 mb-4 resize-none"
+                rows="3" placeholder="Reason for cancellation..."></textarea>
+            <div class="flex gap-3">
+                <button onclick="closeCancelModal()" class="flex-1 py-3 font-bold text-gray-400">Back</button>
+                <button id="confirm-cancel-btn"
+                    class="flex-1 bg-red-500 text-white py-3 rounded-xl font-bold shadow-lg">Continue</button>
             </div>
         </div>
+    </div>
+    
+    <div id="booking-confirm-modal"
+        class="absolute inset-0 z-[130] bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-6">
+        <div class="bg-white w-full rounded-3xl p-8 text-center shadow-2xl">
+            <div class="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500">
+                <i data-lucide="alert-triangle" class="w-10 h-10"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">Final Confirmation</h3>
+            <p class="text-sm text-gray-500 mb-8">Are you sure? This action cannot be undone.</p>
+            <button id="final-confirm-btn"
+                class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold shadow-xl active:scale-95 transition-all mb-3">Yes,
+                Confirm Now</button>
+            <button onclick="closeConfirmModal()" class="w-full py-2 text-gray-400 font-bold">Nevermind, stay</button>
+        </div>
+    </div>
+    
+    <div id="cancel-success-step" class="hidden fade-in text-center pt-20 px-6 bg-white absolute inset-0 z-[140]">
+        <div
+            class="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 text-red-600 animate-bounce">
+            <i data-lucide="trash-2" class="w-12 h-12"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">Appointment Cancelled</h2>
+        <p class="text-gray-500 mb-8 px-4">Your appointment has been successfully removed from the schedule.</p>
+        <button onclick="window.location.reload()"
+            class="w-full bg-slate-900 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all">Back
+            to List</button>
+    </div>
 
         <div id="doctor-popup"
             class="absolute inset-0 bg-black/50 backdrop-blur-sm z-[150] hidden flex flex-col justify-end">

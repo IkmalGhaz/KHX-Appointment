@@ -303,6 +303,18 @@ function renderCharts(ageData, doctorData) {
         });
     }
 }
+
+// --- LOGOUT LOGIC ---
+const profileLogoutBtn = document.getElementById('profile-logout-btn');
+if (profileLogoutBtn) {
+    profileLogoutBtn.onclick = async () => {
+        if (confirm("Logout from KHS Clinic?")) {
+            await signOut(auth);
+            window.location.href = "index.html";
+        }
+    };
+}
+
 // --- AUTH OBSERVER ---
 onAuthStateChanged(auth, async (user) => {
     if (user) {

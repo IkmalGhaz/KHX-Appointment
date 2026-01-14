@@ -142,24 +142,55 @@ function renderList(list) {
     }
 
     aptList.innerHTML = list.map(apt => `
-        <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm mb-3">
-            <div class="flex justify-between items-start mb-2">
-                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${getStatusStyle(apt.status)} uppercase">${apt.status}</span>
-                <span class="text-xs font-bold text-gray-400">${apt.date}</span>
+        <div class="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm mb-4 transition-all hover:shadow-md">
+            <div class="flex justify-between items-start mb-3">
+                <span class="text-[10px] font-black px-3 py-1 rounded-full ${getStatusStyle(apt.status)} uppercase tracking-wider">
+                    ${apt.status}
+                </span>
+                <div class="text-right">
+                    <p class="text-xs font-bold text-gray-900">${apt.date}</p>
+                    <p class="text-[10px] font-medium text-gray-400">${apt.time}</p>
+                </div>
             </div>
-            <h4 class="font-bold text-[#004d40]">${apt.serviceName}</h4>
-            <p class="text-xs text-gray-500 mb-3">${apt.doctorName}</p>
-            <div class="flex justify-between items-center pt-3 border-t border-gray-50">
-                <span class="text-lg font-bold text-gray-700">${apt.time}</span>
+            
+            <div class="flex items-center gap-4 mb-4">
+                <div class="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-[#009688]">
+                    <i data-lucide="calendar" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-gray-800 leading-tight">${apt.serviceName}</h4>
+                    <p class="text-xs text-gray-500">${apt.doctorName}</p>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center pt-4 border-t border-gray-50">
+                <span class="text-base font-black text-[#009688]">RM ${apt.price || '--'}</span>
+                
                 ${(apt.status === 'Upcoming' || apt.status === 'Pending Approval') ?
-            `<button onclick="cancelBooking('${apt.id}')" class="text-xs font-bold text-red-500 hover:underline">Cancel</button>` : ''}
+            `<button onclick="cancelBooking('${apt.id}')" class="flex items-center gap-1 text-xs font-bold text-red-500 bg-red-50 px-4 py-2 rounded-xl hover:bg-red-100 transition-colors">
+                    <i data-lucide="x" class="w-3 h-3"></i> Cancel
+                </button>` : ''}
             </div>
         </div>
     `).join('');
+    // Re-initialize icons
+    if (window.lucide) window.lucide.createIcons();
+
 }
 
 function getStatusStyle(status) {
-    if (status === 'Upcoming' || status === 'Pending Approval') return 'bg-teal-50 text-teal-600';
-    if (status === 'Cancelled') return 'bg-red-50 text-red-600';
-    return 'bg-gray-50 text-gray-600';
+    const s = status.toLowerCase();
+
+    // Upcoming / Pending -> Green
+    if (s === 'upcoming' || s === 'pending approval' || s === 'pending') {
+        return 'bg-green-100 text-green-700 border border-green-200';
+    }
+
+    // Cancelled -> Red
+    if (s === 'cancelled') {
+        return 'bg-red-100 text-red-700 border border-red-200';
+    }
+
+    // Past / Completed -> Dark Grey
+    return 'bg-slate-800 text-white border border-slate-900';
 }
