@@ -63,9 +63,20 @@
                     <textarea id="address" rows="2" required class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-red-500 resize-none"></textarea>
                 </div>
 
-                <div>
+                <div class="relative">
                     <label class="text-xs font-bold text-gray-400 uppercase ml-1">Password</label>
-                    <input type="password" id="password" placeholder="••••••••" required class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-red-500">
+                    <input type="password" id="password" placeholder="••••••••" required class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-red-500 pr-12">
+                    <button type="button" onclick="togglePassword('password', 'eye-icon-1')" class="absolute right-4 top-9 text-gray-400 hover:text-gray-600 focus:outline-none">
+                        <i data-lucide="eye" class="w-5 h-5" id="eye-icon-1"></i>
+                    </button>
+                </div>
+
+                <div class="relative">
+                    <label class="text-xs font-bold text-gray-400 uppercase ml-1">Confirm Password</label>
+                    <input type="password" id="confirm-password" placeholder="••••••••" required class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-red-500 pr-12">
+                    <button type="button" onclick="togglePassword('confirm-password', 'eye-icon-2')" class="absolute right-4 top-9 text-gray-400 hover:text-gray-600 focus:outline-none">
+                        <i data-lucide="eye" class="w-5 h-5" id="eye-icon-2"></i>
+                    </button>
                 </div>
 
                 <button type="submit" id="submit-btn" class="w-full bg-red-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-red-200 active:scale-95 transition-all mt-4">
@@ -79,39 +90,59 @@
     <script type="module">
         import { auth, db, createUserWithEmailAndPassword, setDoc, doc } from './assets/js/firebase-config.js';
 
+        // --- 1. Password Visibility Toggle Logic ---
+        window.togglePassword = (inputId, iconId) => {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(iconId);
+            
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            
+            // Switch Icon
+            icon.setAttribute('data-lucide', isPassword ? 'eye-off' : 'eye');
+            lucide.createIcons();
+        };
+
         const regForm = document.getElementById('reg-form');
         const submitBtn = document.getElementById('submit-btn');
 
         regForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            // UI Loading
+            // 1. Get Values
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            const fullName = document.getElementById('fullName').value;
+            const phone = document.getElementById('phone').value;
+            const gender = document.getElementById('gender').value;
+            const dobInput = document.getElementById('dob').value;
+            const address = document.getElementById('address').value;
+
+            // 2. Client-Side Validation: Check if passwords match
+            if (password !== confirmPassword) {
+                alert("Passwords do not match. Please try again.");
+                return;
+            }
+
+            // UI Loading State
             const originalText = submitBtn.innerText;
             submitBtn.innerText = "Creating Profile...";
             submitBtn.disabled = true;
             submitBtn.classList.add('opacity-75');
 
             try {
-                // 1. Get Values
-                const email = document.getElementById('email').value;
-                const password = document.getElementById('password').value;
-                const fullName = document.getElementById('fullName').value;
-                const phone = document.getElementById('phone').value;
-                const gender = document.getElementById('gender').value;
-                const dobInput = document.getElementById('dob').value; // YYYY-MM-DD
-                const address = document.getElementById('address').value;
-
-                // Format DOB to DD/MM/YYYY (Based on your screenshot)
+                // Format DOB to DD/MM/YYYY
                 const [year, month, day] = dobInput.split('-');
                 const formattedDOB = `${day}/${month}/${year}`;
 
-                // 2. Create Auth User
+                // 3. Create Auth User
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
 
-                // 3. Save to Firestore (MATCHING YOUR SCHEMA)
+                // 4. Save to Firestore
                 await setDoc(doc(db, "Users", user.uid), {
-                    userId: "U" + Math.floor(1000 + Math.random() * 9000), // Random ID like "U1029"
+                    userId: "U" + Math.floor(1000 + Math.random() * 9000), 
                     firebaseUid: user.uid,
                     fullName: fullName,
                     email: email,
@@ -121,7 +152,7 @@
                     mailingAddress: address,
                     role: "Patient",
                     status: "Active",
-                    profilePictureUrl: "", // Empty for now
+                    profilePictureUrl: "",
                     createdAt: new Date()
                 });
 
@@ -130,7 +161,12 @@
 
             } catch (error) {
                 console.error(error);
-                alert("Error: " + error.message);
+                let msg = error.message;
+                if(error.code === 'auth/email-already-in-use') msg = "This email is already registered.";
+                if(error.code === 'auth/weak-password') msg = "Password should be at least 6 characters.";
+                
+                alert("Error: " + msg);
+                
                 submitBtn.innerText = originalText;
                 submitBtn.disabled = false;
                 submitBtn.classList.remove('opacity-75');
