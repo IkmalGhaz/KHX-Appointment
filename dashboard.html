@@ -102,6 +102,39 @@
             background: white;
             flex-shrink: 0;
         }
+        /* Glassmorphism Effect */
+.glass-card {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+}
+
+/* Gradient Background for Header */
+.header-gradient {
+    background: linear-gradient(135deg, #009688 0%, #00796b 100%);
+}
+
+/* Shimmer Animation for loading states */
+@keyframes shimmer {
+    0% { background-position: -468px 0; }
+    100% { background-position: 468px 0; }
+}
+.loading-shimmer {
+    background: #f6f7f8;
+    background-image: linear-gradient(to right, #f6f7f8 0%, #edeef1 20%, #f6f7f8 40%, #f6f7f8 100%);
+    background-repeat: no-repeat;
+    background-size: 800px 104px; 
+    animation: shimmer 1.5s infinite linear;
+}
+
+/* Smooth scaling on hover */
+.hover-scale {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.hover-scale:active {
+    transform: scale(0.96);
+}
     </style>
 </head>
 
@@ -127,8 +160,8 @@
                         <h4 id="view-member-since" class="text-base font-bold text-gray-800 leading-tight">Loading...
                         </h4>
                         <p id="view-days-count" class="text-xs font-bold text-[#009688]">-- days with us</p>
+                        </div>
                     </div>
-                </div>
 
                 <div class="flex flex-col items-center gap-3">
                     <img id="view-prof-img" src="assets/js/images/default-user.png"
@@ -238,7 +271,7 @@
         <div class="flex-1 overflow-y-auto no-scrollbar px-6 -mt-10 pb-6 relative z-20 space-y-5">
             <div class="pt-4 px-1">
                 <div class="scroll-container no-scrollbar gap-4 pb-4">
-                    <div class="scroll-item interactive-card bg-white p-5 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col items-center justify-center cursor-pointer"
+                    <div class="scroll-item interactive-card glass-card hover-scale p-5 rounded-[2rem] flex flex-col items-center justify-center cursor-pointer"
                         onclick="openHealthModal()">
                         <i data-lucide="activity" class="w-12 h-12 bg-blue-50 text-blue-500 p-3 rounded-full mb-3"></i>
                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">My Health</p>
@@ -252,8 +285,8 @@
                         </div>
                     </div>
 
-                    <div class="scroll-item interactive-card bg-white p-5 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col items-center justify-center cursor-pointer"
-                         onclick="openMoodModal()">
+                    <div class="scroll-item interactive-card glass-card hover-scale p-5 rounded-[2rem] flex flex-col items-center justify-center cursor-pointer"
+                        onclick="openMoodModal()">
                         <div id="dash-mood-ring-container"
                             class="w-16 h-16 rounded-full flex items-center justify-center mb-2 relative transition-all duration-500"
                             style="background: conic-gradient(#f3f4f6 0%, #f3f4f6 0%);">

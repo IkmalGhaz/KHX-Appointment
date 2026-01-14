@@ -128,6 +128,8 @@ function setupProfileListener(uid) {
             const userDoc = snapshot.docs[0];
             currentUserDocId = userDoc.id;
             const data = userDoc.data();
+
+            
             if (viewFullNameHeader) viewFullNameHeader.innerText = data.fullName || "User Name";
             if (viewFullName) viewFullName.innerText = data.fullName || "--";
             if (viewPhone) viewPhone.innerText = data.phone || "--";
@@ -191,7 +193,7 @@ function setupStatsListeners(uid) {
                 return timeB - timeA;
             });
             const latest = sortedDocs[0].data();
-
+            
             // Ensure elements exist before updating
             const hEl = document.getElementById('dash-height');
             const wEl = document.getElementById('dash-weight');
@@ -412,6 +414,7 @@ if (profileLogoutBtn) {
     };
 }
 
+
 // --- AUTH OBSERVER ---
 onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -430,3 +433,4 @@ onAuthStateChanged(auth, async (user) => {
         window.location.href = "index.html";
     }
 });
+
