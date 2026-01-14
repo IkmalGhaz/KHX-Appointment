@@ -29,7 +29,8 @@ let bookingData = {
     date: null, 
     time: null 
 };
-let blockedDates = []; 
+let blockedDates = [];
+let bookedTimes = []; // NEW: Stores specific times that are already taken for the selected date 
 
 // --- 1. NAVIGATION LOGIC ---
 window.handleBack = () => {
@@ -223,7 +224,33 @@ async function fetchDoctorSchedule(doctorId) {
         console.error("Error fetching schedule:", e);
     }
 }
+// NEW: Fetch bookings for a specific date to disable specific times
+async function fetchBookedSlots(doctorId, dateString) {
+    bookedTimes = []; // Reset
+    const timeSlotContainer = document.getElementById('time-slots');
+    // Show loading state
+    if(timeSlotContainer) timeSlotContainer.innerHTML = '<div class="col-span-2 text-center py-4"><div class="animate-spin inline-block w-5 h-5 border-2 border-[#009688] border-t-transparent rounded-full"></div></div>';
 
+    try {
+        // Find bookings for this doctor + this date that are NOT cancelled
+        const q = query(collection(db, "bookings"), 
+            where("doctorId", "==", doctorId),
+            where("date", "==", dateString),
+            where("status", "!=", "Cancelled")
+        );
+        
+        const snapshot = await getDocs(q);
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.time) bookedTimes.push(data.time);
+        });
+        
+    } catch (e) {
+        console.error("Error fetching booked slots:", e);
+    }
+    // Now render the buttons
+    renderTimeSlots();
+}
 // --- 5. INITIALIZE FLATPICKR ---
 function initFlatpickr() {
     const timeSlotContainer = document.getElementById('time-slots');
@@ -245,19 +272,26 @@ function initFlatpickr() {
         defaultDate: bookingData.date, 
         locale: { firstDayOfWeek: 1 },
         
-        onChange: function(selectedDates, dateStr, instance) {
-            bookingData.date = dateStr; 
-            renderTimeSlots();
-            input.classList.add('border-[#009688]', 'ring-1', 'ring-[#009688]');
-        }
+     onChange: function(selectedDates, dateStr, instance) {
+    bookingData.date = dateStr; 
+    
+    // 1. Clear the old buttons immediately so user knows it is loading
+    document.getElementById('time-slots').innerHTML = '<p class="col-span-2 text-center text-gray-400">Checking availability...</p>';
+
+    // 2. Ask Firebase: "Which times are taken?"
+    // (This function will automatically draw the RED buttons when it finishes)
+    fetchBookedSlots(bookingData.doctorId, dateStr);
+
+    input.classList.add('border-[#009688]', 'ring-1', 'ring-[#009688]');
+}
     });
 }
 
 function renderTimeSlots() {
     const container = document.getElementById('time-slots');
     if(!container) return;
-    const slots = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
-    container.innerHTML = '';
+const slots = ['9:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
+container.innerHTML = '';
     
     const now = new Date();
     const currentHour = now.getHours();
@@ -271,13 +305,25 @@ function renderTimeSlots() {
         const btn = document.createElement('button');
         btn.type = 'button';
         const slotHour = parseInt(time.substring(0, 2));
+        
+        // 1. Check if time passed today
         let isExpired = isToday && (slotHour <= currentHour);
+        
+        // 2. NEW: Check if time is already in database
+        let isTaken = bookedTimes.includes(time);
 
         if (isExpired) {
             btn.className = "bg-gray-50 border border-gray-100 text-gray-300 py-3 rounded-xl font-bold cursor-not-allowed";
             btn.innerText = time;
             btn.disabled = true;
-        } else {
+        } 
+        else if (isTaken) {
+            // Style for TAKEN slots
+            btn.className = "bg-red-50 border border-red-100 text-red-300 py-3 rounded-xl font-bold cursor-not-allowed relative overflow-hidden";
+            btn.innerHTML = `<span class="relative z-10">${time}</span> <div class="absolute inset-0 flex items-center justify-center bg-white/50 text-[10px] text-red-500 font-black rotate-12">Fully Booked</div>`;
+            btn.disabled = true;
+        }
+        else {
             btn.className = "bg-white border border-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-[#009688] hover:text-white transition-all shadow-sm";
             btn.innerText = time;
             
@@ -329,6 +375,25 @@ window.processPayment = async () => {
 
     try {
         const user = auth.currentUser;
+
+        const checkQ = query(collection(db, "bookings"), 
+            where("doctorId", "==", bookingData.doctorId),
+            where("date", "==", bookingData.date),
+            where("time", "==", bookingData.time),
+            where("status", "!=", "Cancelled")
+        );
+        const checkSnap = await getDocs(checkQ);
+        
+        if (!checkSnap.empty) {
+            alert(`Sorry! The slot ${bookingData.time} on ${bookingData.date} was just booked by another patient. Please choose another time.`);
+            btn.innerText = originalText;
+            btn.disabled = false;
+            showStep(3); // Send them back to date selection
+            // Refresh the slots to show the newly booked one
+            fetchBookedSlots(bookingData.doctorId, bookingData.date); 
+            return; // STOP EXECUTION
+        }
+        // -------------------------------------
         
         const docRef = await addDoc(collection(db, "bookings"), {
             patientId: user.uid,
